@@ -11,10 +11,11 @@ func ExampleWriter() {
 	w.AppendUint(1, 4, AlignRight|Base16|ZeroFill)
 	w.AppendString("playback", 10, AlignLeft)
 	w.AppendUint(44, 2, AlignLeft|Base10)
+	w.AppendBool(false, 3, AlignCenter|OnOff)
 
 	fmt.Println(w.String())
 	// Output:
-	//     1 | 0001 | playback   | 44
+	//     1 | 0001 | playback   | 44 | off
 }
 
 func TestAppendString(t *testing.T) {

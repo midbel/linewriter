@@ -155,7 +155,7 @@ func (w *Writer) appendRight(data []byte, width int, flag Flag) {
 	if set := flag & AlignRight; set != 0 {
 		offset = w.offset + (width - len(data))
 	} else if set := flag & AlignCenter; set != 0 {
-		offset = (width - len(data)) / 2
+		offset = w.offset + ((width - len(data)) / 2)
 	} else {
 		offset = w.offset
 	}
