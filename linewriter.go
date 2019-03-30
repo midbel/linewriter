@@ -57,7 +57,11 @@ func New(size, padsiz int) *Writer {
 }
 
 func (w *Writer) Reset() {
-	for i := 0; i < len(w.buffer); i++ {
+	n := len(w.buffer)
+	if w.offset > 0 {
+		n = w.offset
+	}
+	for i := 0; i < n; i++ {
 		w.buffer[i] = ' '
 	}
 	w.offset = 0
@@ -72,10 +76,13 @@ func (w *Writer) String() string {
 }
 
 func (w *Writer) Read(bs []byte) (int, error) {
+	if w.offset == 0 {
+		return w.offset, io.EOF
+	}
 	if len(bs) < w.offset {
 		return 0, io.ErrShortBuffer
 	}
-	n := copy(bs, append(w.buffer, '\n'))
+	n := copy(bs, append(w.buffer[:w.offset], '\n'))
 	w.Reset()
 	return n, nil
 }
