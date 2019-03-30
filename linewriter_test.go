@@ -18,6 +18,14 @@ func ExampleWriter() {
 	//     1 | 0001 | playback   | 44 | off
 }
 
+func BenchmarkAppendString(b *testing.B) {
+	w := NewWriter(256, 1, '_')
+	for i := 0; i < b.N; i++ {
+		w.AppendString("hello world", 12, Text|AlignRight)
+		w.Reset()
+	}
+}
+
 func TestAppendString(t *testing.T) {
 	w := NewWriter(256, 1, '_')
 	data := []struct {
