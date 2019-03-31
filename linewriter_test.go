@@ -8,9 +8,9 @@ import (
 func ExampleWriter() {
 	w := NewWriter(256, 1, ' ')
 	w.AppendUint(1, 4, AlignRight)
-	w.AppendUint(1, 4, AlignRight|Base16|ZeroFill)
+	w.AppendUint(1, 4, AlignRight|Hex|WithZero)
 	w.AppendString("playback", 10, AlignLeft)
-	w.AppendUint(44, 2, AlignLeft|Base10)
+	w.AppendUint(44, 2, AlignLeft|Decimal)
 	w.AppendBool(false, 3, AlignCenter|OnOff)
 
 	fmt.Println(w.String())
@@ -57,10 +57,10 @@ func TestAppendInt(t *testing.T) {
 		Want  string
 		Flags Flag
 	}{
-		{Value: 3, Flags: AlignRight | Base10, Want: "_    3_"},
-		{Value: 3, Flags: AlignLeft | Base10, Want: "_3    _"},
-		{Value: 3, Flags: AlignLeft | WithSign | Base10, Want: "_+3   _"},
-		{Value: 15, Flags: AlignRight | WithPrefix | Base16, Want: "_  0xf_"},
+		{Value: 3, Flags: AlignRight | Decimal, Want: "_    3_"},
+		{Value: 3, Flags: AlignLeft | Decimal, Want: "_3    _"},
+		{Value: 3, Flags: AlignLeft | WithSign | Decimal, Want: "_+3   _"},
+		{Value: 15, Flags: AlignRight | WithPrefix | Hex, Want: "_  0xf_"},
 	}
 	for i, d := range data {
 		w.AppendInt(d.Value, 5, d.Flags)
@@ -109,16 +109,16 @@ func TestAppendUint(t *testing.T) {
 		Want  string
 		Flags Flag
 	}{
-		{Value: 453721, Flags: Base10 | AlignRight, Want: "     453721 "},
-		{Value: 453721, Flags: Base10 | AlignLeft, Want: " 453721     "},
-		{Value: 453721, Flags: Base10 | AlignRight | NoPadding, Want: "    453721"},
-		{Value: 453721, Flags: Base10 | AlignLeft | NoPadding, Want: "453721    "},
-		{Value: 453721, Flags: Base16 | AlignLeft | NoPadding, Want: "6ec59     "},
-		{Value: 453721, Flags: Base16 | AlignRight | NoPadding, Want: "     6ec59"},
-		{Value: 453721, Flags: Base16 | AlignRight | NoPadding | ZeroFill, Want: "000006ec59"},
-		{Value: 453721, Flags: Base16 | AlignRight | ZeroFill, Want: " 000006ec59 "},
-		{Value: 453721, Flags: Base16 | AlignLeft, Want: " 6ec59      "},
-		{Value: 453721, Flags: Base16 | AlignRight, Want: "      6ec59 "},
+		{Value: 453721, Flags: Decimal | AlignRight, Want: "     453721 "},
+		{Value: 453721, Flags: Decimal | AlignLeft, Want: " 453721     "},
+		{Value: 453721, Flags: Decimal | AlignRight | NoPadding, Want: "    453721"},
+		{Value: 453721, Flags: Decimal | AlignLeft | NoPadding, Want: "453721    "},
+		{Value: 453721, Flags: Hex | AlignLeft | NoPadding, Want: "6ec59     "},
+		{Value: 453721, Flags: Hex | AlignRight | NoPadding, Want: "     6ec59"},
+		{Value: 453721, Flags: Hex | AlignRight | NoPadding | WithZero, Want: "000006ec59"},
+		{Value: 453721, Flags: Hex | AlignRight | WithZero, Want: " 000006ec59 "},
+		{Value: 453721, Flags: Hex | AlignLeft, Want: " 6ec59      "},
+		{Value: 453721, Flags: Hex | AlignRight, Want: "      6ec59 "},
 	}
 	for i, d := range data {
 		w.AppendUint(d.Value, 10, d.Flags)

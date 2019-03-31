@@ -13,22 +13,21 @@ const (
 	AlignLeft Flag = 1 << iota
 	AlignRight
 	AlignCenter
-	BasePrefix
-	Base2
-	Base8
-	Base10
-	Base16
-	ZeroFill
+	WithZero
 	WithSign
 	WithPrefix
+	WithQuote
 	NoPadding
 	NoSeparator
 	YesNo
 	OnOff
 	TrueFalse
 	Hex
+	Octal
+	Binary
+	Decimal
 	Text
-	Quote
+	Bytes
 )
 
 type Writer struct {
@@ -142,7 +141,7 @@ func (w *Writer) AppendBool(b bool, width int, flag Flag) {
 func (w *Writer) AppendInt(v int64, width int, flag Flag) {
 	w.appendLeft(flag)
 
-	if set := flag & ZeroFill; set != 0 {
+	if set := flag & WithZero; set != 0 {
 		for i := 0; i < width; i++ {
 			w.buffer[w.offset+i] = '0'
 		}
@@ -160,7 +159,7 @@ func (w *Writer) AppendInt(v int64, width int, flag Flag) {
 func (w *Writer) AppendUint(v uint64, width int, flag Flag) {
 	w.appendLeft(flag)
 
-	if set := flag & ZeroFill; set != 0 {
+	if set := flag & WithZero; set != 0 {
 		for i := 0; i < width; i++ {
 			w.buffer[w.offset+i] = '0'
 		}
@@ -208,11 +207,11 @@ func (w *Writer) appendLeft(flag Flag) {
 
 func prepareNumber(data []byte, flag Flag, positive bool) (int, []byte) {
 	base := 10
-	if set := flag & Base16; set != 0 {
+	if set := flag & Hex; set != 0 {
 		base = 16
-	} else if set := flag & Base8; set != 0 {
+	} else if set := flag & Octal; set != 0 {
 		base = 8
-	} else if set := flag & Base2; set != 0 {
+	} else if set := flag & Binary; set != 0 {
 		base = 2
 	}
 
