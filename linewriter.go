@@ -4,6 +4,7 @@ import (
 	"encoding/hex"
 	"io"
 	"strconv"
+	"time"
 )
 
 type Flag uint64
@@ -27,10 +28,12 @@ const (
 	TrueFalse
 	Hex
 	Text
+	Quote
 )
 
 type Writer struct {
 	buffer []byte
+	tmp    []byte
 	offset int
 
 	padding   []byte
@@ -40,6 +43,7 @@ type Writer struct {
 func NewWriter(size, padsiz int, padchar byte) *Writer {
 	w := Writer{
 		buffer:    make([]byte, size),
+		tmp:       make([]byte, 0, 512),
 		separator: []byte("|"),
 	}
 	if padsiz > 0 {
@@ -105,6 +109,16 @@ func (w *Writer) AppendBytes(bs []byte, width int, flag Flag) {
 	w.appendRight(data, width, flag)
 }
 
+func (w *Writer) AppendTime(t time.Time, format string, flag Flag) {
+	w.appendLeft(flag)
+
+	// tmp := make([]byte, 0, 64)
+	w.tmp = t.AppendFormat(w.tmp, format)
+
+	w.appendRight(w.tmp, len(w.tmp), flag)
+	w.tmp = w.tmp[:0]
+}
+
 func (w *Writer) AppendBool(b bool, width int, flag Flag) {
 	w.appendLeft(flag)
 
@@ -133,12 +147,14 @@ func (w *Writer) AppendInt(v int64, width int, flag Flag) {
 			w.buffer[w.offset+i] = '0'
 		}
 	}
-	base, data := prepareNumber(flag, v > 0)
+	var base int
+	base, w.tmp = prepareNumber(w.tmp, flag, v > 0)
 
-	tmp := make([]byte, 0, 16)
-	tmp = strconv.AppendInt(tmp, v, base)
+	// tmp := make([]byte, 0, 16)
+	w.tmp = strconv.AppendInt(w.tmp, v, base)
 
-	w.appendRight(append(data, tmp...), width, flag)
+	w.appendRight(w.tmp, width, flag)
+	w.tmp = w.tmp[:0]
 }
 
 func (w *Writer) AppendUint(v uint64, width int, flag Flag) {
@@ -149,12 +165,14 @@ func (w *Writer) AppendUint(v uint64, width int, flag Flag) {
 			w.buffer[w.offset+i] = '0'
 		}
 	}
-	base, data := prepareNumber(flag, v > 0)
+	var base int
+	base, w.tmp = prepareNumber(w.tmp, flag, v > 0)
 
-	tmp := make([]byte, 0, 16)
-	tmp = strconv.AppendUint(tmp, v, base)
+	// tmp := make([]byte, 0, 16)
+	w.tmp = strconv.AppendUint(w.tmp, v, base)
 
-	w.appendRight(append(data, tmp...), width, flag)
+	w.appendRight(w.tmp, width, flag)
+	w.tmp = w.tmp[:0]
 }
 
 func (w *Writer) appendRight(data []byte, width int, flag Flag) {
@@ -188,7 +206,7 @@ func (w *Writer) appendLeft(flag Flag) {
 	}
 }
 
-func prepareNumber(flag Flag, positive bool) (int, []byte) {
+func prepareNumber(data []byte, flag Flag, positive bool) (int, []byte) {
 	base := 10
 	if set := flag & Base16; set != 0 {
 		base = 16
@@ -198,7 +216,6 @@ func prepareNumber(flag Flag, positive bool) (int, []byte) {
 		base = 2
 	}
 
-	var data []byte
 	if set := flag & WithSign; set != 0 && positive {
 		data = append(data, '+')
 	}
