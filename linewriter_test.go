@@ -26,6 +26,31 @@ func BenchmarkAppendString(b *testing.B) {
 	}
 }
 
+func TestAppendFloat(t *testing.T) {
+	w := NewWriter(256, 0, '_')
+	data := []struct {
+		Value float64
+		Want  string
+		Flags Flag
+	}{
+		{Value: 0.9845, Flags: Float | AlignRight, Want: "      0.98"},
+		{Value: 0.9845, Flags: Float | Percent | AlignRight, Want: "    98.45%"},
+	}
+	for i, d := range data {
+		if set := d.Flags & Percent; set == 0 {
+			w.AppendFloat(d.Value, 10, 2, d.Flags)
+		} else {
+			w.AppendPercent(d.Value, 10, 2, d.Flags)
+		}
+		got := w.String()
+
+		w.Reset()
+		if got != d.Want {
+			t.Errorf("%d: failed: want %q (%d), got: %q (%d)", i+1, d.Want, len(d.Want), got, len(got))
+		}
+	}
+}
+
 func TestAppendString(t *testing.T) {
 	w := NewWriter(256, 1, '_')
 	data := []struct {

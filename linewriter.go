@@ -26,6 +26,9 @@ const (
 	Octal
 	Binary
 	Decimal
+	Percent
+	Float
+	Scientific
 	Text
 	Bytes
 )
@@ -136,6 +139,27 @@ func (w *Writer) AppendBool(b bool, width int, flag Flag) {
 		data = fval
 	}
 	w.appendRight(data, width, flag)
+}
+
+func (w *Writer) AppendPercent(v float64, width, prec int, flag Flag) {
+	w.AppendFloat(v*100.0, width, prec, flag|Percent|Float)
+}
+
+func (w *Writer) AppendFloat(v float64, width, prec int, flag Flag) {
+	w.appendLeft(flag)
+
+	var format byte = 'g'
+	if set := flag & Scientific; set != 0 {
+		format = 'e'
+	} else if set := flag & Float; set != 0 {
+		format = 'f'
+	}
+	w.tmp = strconv.AppendFloat(w.tmp, v, format, prec, 64)
+	if set := flag & Percent; set != 0 {
+		w.tmp = append(w.tmp, '%')
+	}
+	w.appendRight(w.tmp, width, flag)
+	w.tmp = w.tmp[:0]
 }
 
 func (w *Writer) AppendInt(v int64, width int, flag Flag) {
