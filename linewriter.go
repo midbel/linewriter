@@ -200,6 +200,9 @@ func (w *Writer) AppendUint(v uint64, width int, flag Flag) {
 
 func (w *Writer) appendRight(data []byte, width int, flag Flag) {
 	var offset int
+	if len(data) > width {
+		width = len(data)
+	}
 	if set := flag & AlignRight; set != 0 {
 		offset = w.offset + (width - len(data))
 	} else if set := flag & AlignCenter; set != 0 {
@@ -208,11 +211,7 @@ func (w *Writer) appendRight(data []byte, width int, flag Flag) {
 		offset = w.offset
 	}
 	copy(w.buffer[offset:], data)
-	if len(data) > width {
-		w.offset += len(data)
-	} else {
-		w.offset += width
-	}
+	w.offset += width
 
 	if set := flag & NoPadding; set == 0 {
 		w.offset += copy(w.buffer[w.offset:], w.padding)
