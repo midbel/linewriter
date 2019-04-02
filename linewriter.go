@@ -31,6 +31,9 @@ const (
 	Scientific
 	Text
 	Bytes
+	Second
+	Millisecond
+	Microsecond
 )
 
 type Writer struct {
@@ -121,6 +124,47 @@ func (w *Writer) AppendTime(t time.Time, format string, flag Flag) {
 	w.tmp = w.tmp[:0]
 }
 
+func (w *Writer) AppendDuration(d time.Duration, width int, flag Flag) {
+	w.appendLeft(flag)
+
+	ns := d.Nanoseconds()
+	if d := ns / (int64(time.Hour) * 24); d > 0 {
+		w.tmp = strconv.AppendInt(w.tmp, int64(d), 10)
+		w.tmp = append(w.tmp, 'd')
+	}
+	if d := (ns / int64(time.Hour)) % 24; d > 0 {
+		if set := flag & WithZero; set != 0 && d < 10 {
+			w.tmp = append(w.tmp, '0')
+		}
+		w.tmp = strconv.AppendInt(w.tmp, int64(d), 10)
+		w.tmp = append(w.tmp, 'h')
+	}
+	if d := (ns / int64(time.Minute)) % 60; d > 0 {
+		if set := flag & WithZero; set != 0 && d < 10 {
+			w.tmp = append(w.tmp, '0')
+		}
+		w.tmp = strconv.AppendInt(w.tmp, int64(d), 10)
+		w.tmp = append(w.tmp, 'm')
+	}
+	var v int64
+	if set := flag & Microsecond; set != 0 {
+		ms := (ns / int64(time.Millisecond)) % 1000
+		v = (ms * 1000) + ((ns / int64(time.Microsecond)) % 1000)
+	} else if set := flag & Millisecond; set != 0 {
+		v = (ns / int64(time.Millisecond)) % 1000
+	} else {
+		v = (ns / int64(time.Second)) % 60
+		if set := flag & WithZero; set != 0 && v < 10 {
+			w.tmp = append(w.tmp, '0')
+		}
+	}
+	w.tmp = strconv.AppendInt(w.tmp, v, 10)
+	w.tmp = append(w.tmp, 's')
+
+	w.appendRight(w.tmp, width, flag)
+	w.tmp = w.tmp[:0]
+}
+
 func (w *Writer) AppendBool(b bool, width int, flag Flag) {
 	w.appendLeft(flag)
 
@@ -173,7 +217,6 @@ func (w *Writer) AppendInt(v int64, width int, flag Flag) {
 	var base int
 	base, w.tmp = prepareNumber(w.tmp, flag, v > 0)
 
-	// tmp := make([]byte, 0, 16)
 	w.tmp = strconv.AppendInt(w.tmp, v, base)
 
 	w.appendRight(w.tmp, width, flag)

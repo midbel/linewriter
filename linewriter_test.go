@@ -3,6 +3,7 @@ package linewriter
 import (
 	"fmt"
 	"testing"
+	"time"
 )
 
 func ExampleWriter() {
@@ -23,6 +24,35 @@ func BenchmarkAppendString(b *testing.B) {
 	for i := 0; i < b.N; i++ {
 		w.AppendString("hello world", 12, Text|AlignRight)
 		w.Reset()
+	}
+}
+
+func TestAppendDuration(t *testing.T) {
+	w := NewWriter(256, 1, '_')
+	data := []struct {
+		Value string
+		Want  string
+		Flags Flag
+	}{
+		{Value: "9m47.8791231s", Flags: AlignRight | Second | WithZero, Want: ""},
+		{Value: "9m47.8791231s", Flags: AlignRight | Millisecond | WithZero, Want: ""},
+		{Value: "9m47.8791231s", Flags: AlignRight | Microsecond | WithZero, Want: ""},
+		{Value: "17h31m10.100s", Flags: AlignRight | Second | WithZero, Want: ""},
+		{Value: "17h31m10.100s", Flags: AlignRight | Millisecond | WithZero, Want: ""},
+		{Value: "17h31m10.100s", Flags: AlignRight | Microsecond | WithZero, Want: ""},
+		{Value: "246h18m12.012s", Flags: AlignRight | Second | WithZero, Want: ""},
+		{Value: "246h18m12.012s", Flags: AlignRight | Millisecond | WithZero, Want: ""},
+		{Value: "246h18m12.012s", Flags: AlignRight | Microsecond | WithZero, Want: ""},
+	}
+	for i, d := range data {
+		v, _ := time.ParseDuration(d.Value)
+		w.AppendDuration(v, 12, d.Flags)
+		got := w.String()
+
+		w.Reset()
+		if got != d.Want {
+			t.Errorf("%d: failed: want %q (%d), got: %q (%d)", i+1, d.Want, len(d.Want), got, len(got))
+		}
 	}
 }
 
