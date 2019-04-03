@@ -6,7 +6,7 @@ import (
 	"io"
 	"strconv"
 	"time"
-	// "unicode/utf8"
+	"unicode/utf8"
 )
 
 type Flag uint64
@@ -327,17 +327,24 @@ func (w *Writer) appendRight(data []byte, width int, flag Flag) {
 		width = size
 	}
 
-	var offset int
+	var offset, padleft, padright int
 	if set := flag & AlignRight; set != 0 {
-		offset = w.offset + (width - size)
+		padleft = width - utf8.RuneCount(data)
+		offset = w.offset + padleft
 	} else if set := flag & AlignCenter; set != 0 {
+		count := utf8.RuneCount(data)
+		padleft = (width - size) / 2
+		padright = padleft
+		if count&0x1 == 1 {
+			padright++
+		}
 		offset = w.offset + ((width - size) / 2)
 	} else {
+		padright = width - utf8.RuneCount(data)
 		offset = w.offset
 	}
 	copy(w.buffer[offset:], data)
-	// n := copy(w.buffer[offset:], data)
-	w.offset += width
+	w.offset += padleft + padright + size
 
 	if set := flag & NoPadding; set == 0 {
 		w.offset += copy(w.buffer[w.offset:], w.padding)
