@@ -1,10 +1,12 @@
 package linewriter
 
 import (
+	// "fmt"
 	"encoding/hex"
 	"io"
 	"strconv"
 	"time"
+	// "unicode/utf8"
 )
 
 type Flag uint64
@@ -117,7 +119,6 @@ func (w *Writer) AppendBytes(bs []byte, width int, flag Flag) {
 func (w *Writer) AppendTime(t time.Time, format string, flag Flag) {
 	w.appendLeft(flag)
 
-	// tmp := make([]byte, 0, 64)
 	w.tmp = t.AppendFormat(w.tmp, format)
 
 	w.appendRight(w.tmp, len(w.tmp), flag)
@@ -128,41 +129,121 @@ func (w *Writer) AppendDuration(d time.Duration, width int, flag Flag) {
 	w.appendLeft(flag)
 
 	ns := d.Nanoseconds()
-	if d := ns / (int64(time.Hour) * 24); d > 0 {
-		w.tmp = strconv.AppendInt(w.tmp, int64(d), 10)
-		w.tmp = append(w.tmp, 'd')
+	if d >= time.Minute {
+		w.appendDHM(ns, flag)
 	}
-	if d := (ns / int64(time.Hour)) % 24; d > 0 {
-		if set := flag & WithZero; set != 0 && d < 10 {
-			w.tmp = append(w.tmp, '0')
+	if d >= time.Second {
+		w.appendSeconds(ns, flag)
+	} else {
+		w.appendMillis(ns, flag)
+	}
+
+	w.appendRight(w.tmp, width, flag)
+	w.tmp = w.tmp[:0]
+}
+
+func (w *Writer) appendMillis(ns int64, flag Flag) {
+	const (
+		micros = 1000
+		millis = micros * 1000
+	)
+	var unit []byte
+	if ns >= millis {
+		w.tmp = strconv.AppendInt(w.tmp, ns/millis, 10)
+		w.tmp = append(w.tmp, '.')
+		if µs := ns % millis; µs > 0 {
+			w.tmp = strconv.AppendInt(w.tmp, µs, 10)
 		}
-		w.tmp = strconv.AppendInt(w.tmp, int64(d), 10)
-		w.tmp = append(w.tmp, 'h')
-	}
-	if d := (ns / int64(time.Minute)) % 60; d > 0 {
-		if set := flag & WithZero; set != 0 && d < 10 {
-			w.tmp = append(w.tmp, '0')
+		unit = []byte("ms")
+	} else if ns >= micros {
+		w.tmp = strconv.AppendInt(w.tmp, ns/micros, 10)
+		w.tmp = append(w.tmp, '.')
+		if ns := ns % micros; ns > 0 {
+			w.tmp = strconv.AppendInt(w.tmp, ns, 10)
 		}
-		w.tmp = strconv.AppendInt(w.tmp, int64(d), 10)
-		w.tmp = append(w.tmp, 'm')
+		unit = []byte("µs")
+	} else {
+		w.tmp = strconv.AppendInt(w.tmp, ns, 10)
+		unit = []byte("ns")
 	}
-	var v int64
+	n := skipZeros(w.tmp)
+	w.tmp = append(w.tmp[:n], unit...)
+}
+
+func (w *Writer) appendSeconds(ns int64, flag Flag) {
+	v := (ns / int64(time.Second)) % 60
+	if v < 10 && len(w.tmp) > 0 {
+		w.tmp = append(w.tmp, '0')
+	}
+	w.tmp, v = strconv.AppendInt(w.tmp, v, 10), -1
+	if s1, s2 := flag&Millisecond, flag&Microsecond; s1 > 0 || s2 > 0 {
+		w.tmp = append(w.tmp, '.')
+	}
+
 	if set := flag & Microsecond; set != 0 {
 		ms := (ns / int64(time.Millisecond)) % 1000
 		v = (ms * 1000) + ((ns / int64(time.Microsecond)) % 1000)
 	} else if set := flag & Millisecond; set != 0 {
 		v = (ns / int64(time.Millisecond)) % 1000
 	} else {
-		v = (ns / int64(time.Second)) % 60
-		if set := flag & WithZero; set != 0 && v < 10 {
+		w.tmp = append(w.tmp, 's')
+		return
+	}
+	n := len(w.tmp)
+	if s1, s2 := flag&Millisecond, flag&Microsecond; s1 > 0 || s2 > 0 {
+		if v < 10 {
+			w.tmp = append(w.tmp, '0')
+		}
+		if v < 100 {
+			w.tmp = append(w.tmp, '0')
+		}
+		if s2 > 0 && v < 100000 {
 			w.tmp = append(w.tmp, '0')
 		}
 	}
 	w.tmp = strconv.AppendInt(w.tmp, v, 10)
-	w.tmp = append(w.tmp, 's')
 
-	w.appendRight(w.tmp, width, flag)
-	w.tmp = w.tmp[:0]
+	n = skipZeros(w.tmp)
+	w.tmp = append(w.tmp[:n], 's')
+}
+
+func skipZeros(tmp []byte) int {
+	var n int
+	for i := len(tmp) - 1; i >= 0; i-- {
+		if tmp[i] != '0' {
+			if i == len(tmp)-1 {
+				n = len(tmp)
+			} else {
+				n = i + 1
+			}
+			break
+		}
+	}
+	if n == 0 {
+		n = len(tmp)
+	}
+	return n
+}
+
+func (w *Writer) appendDHM(ns int64, flag Flag) {
+	if d := ns / (int64(time.Hour) * 24); d > 0 {
+		w.tmp = strconv.AppendInt(w.tmp, int64(d), 10)
+		w.tmp = append(w.tmp, 'd')
+	}
+	if d := (ns / int64(time.Hour)) % 24; d > 0 {
+		if d < 10 && len(w.tmp) > 0 {
+			w.tmp = append(w.tmp, '0')
+		}
+		w.tmp = strconv.AppendInt(w.tmp, int64(d), 10)
+		w.tmp = append(w.tmp, 'h')
+	}
+	if d := (ns / int64(time.Minute)) % 60; d > 0 {
+		if d < 10 && len(w.tmp) > 0 {
+			w.tmp = append(w.tmp, '0')
+		}
+		w.tmp = strconv.AppendInt(w.tmp, int64(d), 10)
+		w.tmp = append(w.tmp, 'm')
+	}
 }
 
 func (w *Writer) AppendBool(b bool, width int, flag Flag) {
@@ -234,7 +315,6 @@ func (w *Writer) AppendUint(v uint64, width int, flag Flag) {
 	var base int
 	base, w.tmp = prepareNumber(w.tmp, flag, v > 0)
 
-	// tmp := make([]byte, 0, 16)
 	w.tmp = strconv.AppendUint(w.tmp, v, base)
 
 	w.appendRight(w.tmp, width, flag)
@@ -242,18 +322,21 @@ func (w *Writer) AppendUint(v uint64, width int, flag Flag) {
 }
 
 func (w *Writer) appendRight(data []byte, width int, flag Flag) {
-	var offset int
-	if len(data) > width {
-		width = len(data)
+	size := len(data)
+	if size > width {
+		width = size
 	}
+
+	var offset int
 	if set := flag & AlignRight; set != 0 {
-		offset = w.offset + (width - len(data))
+		offset = w.offset + (width - size)
 	} else if set := flag & AlignCenter; set != 0 {
-		offset = w.offset + ((width - len(data)) / 2)
+		offset = w.offset + ((width - size) / 2)
 	} else {
 		offset = w.offset
 	}
 	copy(w.buffer[offset:], data)
+	// n := copy(w.buffer[offset:], data)
 	w.offset += width
 
 	if set := flag & NoPadding; set == 0 {

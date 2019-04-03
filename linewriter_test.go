@@ -34,15 +34,18 @@ func TestAppendDuration(t *testing.T) {
 		Want  string
 		Flags Flag
 	}{
-		{Value: "9m47.8791231s", Flags: AlignRight | Second | WithZero, Want: ""},
-		{Value: "9m47.8791231s", Flags: AlignRight | Millisecond | WithZero, Want: ""},
-		{Value: "9m47.8791231s", Flags: AlignRight | Microsecond | WithZero, Want: ""},
-		{Value: "17h31m10.100s", Flags: AlignRight | Second | WithZero, Want: ""},
-		{Value: "17h31m10.100s", Flags: AlignRight | Millisecond | WithZero, Want: ""},
-		{Value: "17h31m10.100s", Flags: AlignRight | Microsecond | WithZero, Want: ""},
-		{Value: "246h18m12.012s", Flags: AlignRight | Second | WithZero, Want: ""},
-		{Value: "246h18m12.012s", Flags: AlignRight | Millisecond | WithZero, Want: ""},
-		{Value: "246h18m12.012s", Flags: AlignRight | Microsecond | WithZero, Want: ""},
+		{Value: "9m47.8791231s", Flags: AlignRight | Second | WithZero, Want: "_       9m47s_"},
+		{Value: "9m47.8791231s", Flags: AlignRight | Millisecond | WithZero, Want: "_   9m47.879s_"},
+		{Value: "9m47.8791231s", Flags: AlignRight | Microsecond | WithZero, Want: "_9m47.879123s_"},
+		{Value: "17h31m10.100s", Flags: AlignRight | Second | WithZero, Want: "_   17h31m10s_"},
+		{Value: "17h31m10.100s", Flags: AlignRight | Millisecond | WithZero, Want: "_ 17h31m10.1s_"},
+		{Value: "17h31m10.100s", Flags: AlignRight | Microsecond | WithZero, Want: "_ 17h31m10.1s_"},
+		{Value: "246h18m17.012387s", Flags: AlignRight | Second | WithZero, Want: "_10d06h18m17s_"},
+		{Value: "246h18m17.012387s", Flags: AlignRight | Millisecond | WithZero, Want: "_10d06h18m17.012s_"},
+		{Value: "246h18m17.012387s", Flags: AlignRight | Microsecond | WithZero, Want: "_10d06h18m17.012387s_"},
+		{Value: "1452.32µs", Flags: AlignRight | WithZero, Want: "_   1.45232ms_"},
+		{Value: "452.32µs", Flags: AlignRight | WithZero, Want: "_    452.32µs_"},
+		{Value: "452ns", Flags: AlignRight | WithZero, Want: "_       452ns_"},
 	}
 	for i, d := range data {
 		v, _ := time.ParseDuration(d.Value)
@@ -51,10 +54,16 @@ func TestAppendDuration(t *testing.T) {
 
 		w.Reset()
 		if got != d.Want {
+			t.Logf("want: %x - got: %x", d.Want, got)
 			t.Errorf("%d: failed: want %q (%d), got: %q (%d)", i+1, d.Want, len(d.Want), got, len(got))
 		}
 	}
 }
+
+// want: "_    452.32µs_"
+//  got: "_   452.32µs_
+// 5f 202020203435322e3332c2b573 5f
+// 5f 202020  3435322e3332c2b573 5f
 
 func TestAppendFloat(t *testing.T) {
 	w := NewWriter(256, 0, '_')
