@@ -60,11 +60,6 @@ func TestAppendDuration(t *testing.T) {
 	}
 }
 
-// want: "_    452.32µs_"
-//  got: "_   452.32µs_
-// 5f 202020203435322e3332c2b573 5f
-// 5f 202020  3435322e3332c2b573 5f
-
 func TestAppendFloat(t *testing.T) {
 	w := NewWriter(256, 0, '_')
 	data := []struct {
@@ -162,8 +157,32 @@ func TestAppendBool(t *testing.T) {
 	}
 }
 
+
 func TestAppendTime(t *testing.T) {
-	t.SkipNow()
+	const timeFormat = "2006-01-02 15:04:05.000"
+
+	w := NewWriter(256, 1, '_')
+
+	d := time.Date(2019, 6, 11, 12, 25, 43, 0, time.UTC)
+	data := []struct {
+		Value time.Time
+		Want  string
+		Format string
+		Flags  Flag
+	}{
+		{Value: d, Format: timeFormat, Want: "_2019-06-11 12:25:43.000_", Flags: AlignRight},
+		{Value: d, Format: timeFormat, Want: "_2019-06-11 12:25:43.000_", Flags: AlignCenter},
+		{Value: d, Format: timeFormat, Want: "2019-06-11 12:25:43.000", Flags: NoPadding},
+	}
+	for i, d := range data {
+		w.AppendTime(d.Value, d.Format, d.Flags)
+		got := w.String()
+
+		w.Reset()
+		if got != d.Want {
+			t.Errorf("%d: failed: want %q (%d), got: %q (%d)", i+1, d.Want, len(d.Want), got, len(got))
+		}
+	}
 }
 
 func TestAppendUint(t *testing.T) {

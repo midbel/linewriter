@@ -2,6 +2,7 @@ package linewriter
 
 import (
 	"encoding/hex"
+	// "fmt"
 	"io"
 	"strconv"
 	"time"
@@ -141,111 +142,6 @@ func (w *Writer) AppendDuration(d time.Duration, width int, flag Flag) {
 	w.tmp = w.tmp[:0]
 }
 
-
-func (w *Writer) appendMillis(ns int64, flag Flag) {
-	const (
-		micros = 1000
-		millis = micros*1000
-	)
-	var unit []byte
-	if ns >= millis {
-		w.tmp = strconv.AppendInt(w.tmp, ns/millis, 10)
-		w.tmp = append(w.tmp, '.')
-		if µs := ns%millis; µs > 0 {
-			w.tmp = strconv.AppendInt(w.tmp, µs, 10)
-		}
-		unit = []byte("ms")
-	} else if ns >= micros {
-		w.tmp = strconv.AppendInt(w.tmp, ns/micros, 10)
-		w.tmp = append(w.tmp, '.')
-		if ns := ns%micros; ns > 0 {
-			w.tmp = strconv.AppendInt(w.tmp, ns, 10)
-		}
-		unit = []byte("µs")
-	} else {
-		w.tmp = strconv.AppendInt(w.tmp, ns, 10)
-		unit = []byte("ns")
-	}
-	n := skipZeros(w.tmp)
-	w.tmp = append(w.tmp[:n], unit...)
-}
-
-func (w *Writer) appendSeconds(ns int64, flag Flag) {
-	v := (ns / int64(time.Second)) % 60
-	if v < 10 && len(w.tmp) > 0 {
-			w.tmp = append(w.tmp, '0')
-	}
-	w.tmp, v = strconv.AppendInt(w.tmp, v, 10), -1
-	if s1, s2 := flag & Millisecond, flag & Microsecond; s1 > 0 || s2 > 0 {
-		w.tmp = append(w.tmp, '.')
-	}
-
-	if set := flag & Microsecond; set != 0 {
-		ms := (ns / int64(time.Millisecond)) % 1000
-		v = (ms * 1000) + ((ns / int64(time.Microsecond)) % 1000)
-	} else if set := flag & Millisecond; set != 0 {
-		v = (ns / int64(time.Millisecond)) % 1000
-	} else {
-		w.tmp = append(w.tmp, 's')
-		return
-	}
-	n := len(w.tmp)
-	if s1, s2 := flag & Millisecond, flag & Microsecond; s1 > 0 || s2 > 0 {
-		if v < 10 {
-			w.tmp = append(w.tmp, '0')
-		}
-		if v < 100 {
-			w.tmp = append(w.tmp, '0')
-		}
-		if s2 > 0 && v < 100000 {
-			w.tmp = append(w.tmp, '0')
-		}
-	}
-	w.tmp = strconv.AppendInt(w.tmp, v, 10)
-
-	n = skipZeros(w.tmp)
-	w.tmp = append(w.tmp[:n], 's')
-}
-
-func skipZeros(tmp []byte) int {
-	var n int
-	for i := len(tmp)-1; i >= 0; i-- {
-		if tmp[i] != '0' {
-			if i == len(tmp)-1 {
-				n = len(tmp)
-			} else {
-				n = i+1
-			}
-			break
-		}
-	}
-	if n == 0 {
-		n = len(tmp)
-	}
-	return n
-}
-
-func (w *Writer) appendDHM(ns int64, flag Flag) {
-	if d := ns / (int64(time.Hour)*24); d > 0 {
-		w.tmp = strconv.AppendInt(w.tmp, int64(d), 10)
-		w.tmp = append(w.tmp, 'd')
-	}
-	if d := (ns / int64(time.Hour)) % 24; d > 0 {
-		if d < 10 && len(w.tmp) > 0 {
-				w.tmp = append(w.tmp, '0')
-		}
-		w.tmp = strconv.AppendInt(w.tmp, int64(d), 10)
-		w.tmp = append(w.tmp, 'h')
-	}
-	if d := (ns / int64(time.Minute)) % 60; d > 0 {
-		if d < 10 && len(w.tmp) > 0 {
-				w.tmp = append(w.tmp, '0')
-		}
-		w.tmp = strconv.AppendInt(w.tmp, int64(d), 10)
-		w.tmp = append(w.tmp, 'm')
-	}
-}
-
 func (w *Writer) AppendBool(b bool, width int, flag Flag) {
 	w.appendLeft(flag)
 
@@ -321,6 +217,110 @@ func (w *Writer) AppendUint(v uint64, width int, flag Flag) {
 	w.tmp = w.tmp[:0]
 }
 
+func (w *Writer) appendMillis(ns int64, flag Flag) {
+	const (
+		micros = 1000
+		millis = micros*1000
+	)
+	var unit []byte
+	if ns >= millis {
+		w.tmp = strconv.AppendInt(w.tmp, ns/millis, 10)
+		w.tmp = append(w.tmp, '.')
+		if µs := ns%millis; µs > 0 {
+			w.tmp = strconv.AppendInt(w.tmp, µs, 10)
+		}
+		unit = []byte("ms")
+	} else if ns >= micros {
+		w.tmp = strconv.AppendInt(w.tmp, ns/micros, 10)
+		w.tmp = append(w.tmp, '.')
+		if ns := ns%micros; ns > 0 {
+			w.tmp = strconv.AppendInt(w.tmp, ns, 10)
+		}
+		unit = []byte("µs")
+	} else {
+		w.tmp = strconv.AppendInt(w.tmp, ns, 10)
+		unit = []byte("ns")
+	}
+	n := skipZeros(w.tmp)
+	w.tmp = append(w.tmp[:n], unit...)
+}
+
+func (w *Writer) appendDHM(ns int64, flag Flag) {
+	if d := ns / (int64(time.Hour)*24); d > 0 {
+		w.tmp = strconv.AppendInt(w.tmp, int64(d), 10)
+		w.tmp = append(w.tmp, 'd')
+	}
+	if d := (ns / int64(time.Hour)) % 24; d > 0 {
+		if d < 10 && len(w.tmp) > 0 {
+				w.tmp = append(w.tmp, '0')
+		}
+		w.tmp = strconv.AppendInt(w.tmp, int64(d), 10)
+		w.tmp = append(w.tmp, 'h')
+	}
+	if d := (ns / int64(time.Minute)) % 60; d > 0 {
+		if d < 10 && len(w.tmp) > 0 {
+				w.tmp = append(w.tmp, '0')
+		}
+		w.tmp = strconv.AppendInt(w.tmp, int64(d), 10)
+		w.tmp = append(w.tmp, 'm')
+	}
+}
+
+func (w *Writer) appendSeconds(ns int64, flag Flag) {
+	v := (ns / int64(time.Second)) % 60
+	if v < 10 && len(w.tmp) > 0 {
+			w.tmp = append(w.tmp, '0')
+	}
+	w.tmp, v = strconv.AppendInt(w.tmp, v, 10), -1
+	if s1, s2 := flag & Millisecond, flag & Microsecond; s1 > 0 || s2 > 0 {
+		w.tmp = append(w.tmp, '.')
+	}
+
+	if set := flag & Microsecond; set != 0 {
+		ms := (ns / int64(time.Millisecond)) % 1000
+		v = (ms * 1000) + ((ns / int64(time.Microsecond)) % 1000)
+	} else if set := flag & Millisecond; set != 0 {
+		v = (ns / int64(time.Millisecond)) % 1000
+	} else {
+		w.tmp = append(w.tmp, 's')
+		return
+	}
+	n := len(w.tmp)
+	if s1, s2 := flag & Millisecond, flag & Microsecond; s1 > 0 || s2 > 0 {
+		if v < 10 {
+			w.tmp = append(w.tmp, '0')
+		}
+		if v < 100 {
+			w.tmp = append(w.tmp, '0')
+		}
+		if s2 > 0 && v < 100000 {
+			w.tmp = append(w.tmp, '0')
+		}
+	}
+	w.tmp = strconv.AppendInt(w.tmp, v, 10)
+
+	n = skipZeros(w.tmp)
+	w.tmp = append(w.tmp[:n], 's')
+}
+
+func skipZeros(tmp []byte) int {
+	var n int
+	for i := len(tmp)-1; i >= 0; i-- {
+		if tmp[i] != '0' {
+			if i == len(tmp)-1 {
+				n = len(tmp)
+			} else {
+				n = i+1
+			}
+			break
+		}
+	}
+	if n == 0 {
+		n = len(tmp)
+	}
+	return n
+}
+
 func (w *Writer) appendRight(data []byte, width int, flag Flag) {
 	size := len(data)
 	if size > width {
@@ -330,15 +330,13 @@ func (w *Writer) appendRight(data []byte, width int, flag Flag) {
 	var padleft, padright int
 	if set := flag & AlignRight; set != 0 {
 		padleft = width - utf8.RuneCount(data)
-		// offset = w.offset + padleft
 	} else if set := flag & AlignCenter; set != 0 {
-		count := utf8.RuneCount(data)
-		padleft = (width - size) / 2
+		padleft = (width - utf8.RuneCount(data)) / 2
 		padright = padleft
-		if count & 0x1 == 1 {
-			padright++
+
+		if c := padleft + padright + size; c < width {
+			padright += width - c
 		}
-		// offset = w.offset + padleft
 	} else {
 		padright = width - utf8.RuneCount(data)
 	}
