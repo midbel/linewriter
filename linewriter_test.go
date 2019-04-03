@@ -6,8 +6,13 @@ import (
 	"time"
 )
 
+var defaults = []func(*Writer){
+	WithPadding([]byte("_")),
+	WithSeparator([]byte("|")),
+}
+
 func ExampleWriter() {
-	w := NewWriter(256, 1, ' ')
+	w := NewWriter(256, WithPadding([]byte(" ")), WithSeparator([]byte("|")))
 	w.AppendUint(1, 4, AlignRight)
 	w.AppendUint(1, 4, AlignRight|Hex|WithZero)
 	w.AppendString("playback", 10, AlignLeft)
@@ -20,7 +25,7 @@ func ExampleWriter() {
 }
 
 func BenchmarkAppendString(b *testing.B) {
-	w := NewWriter(256, 1, '_')
+	w := NewWriter(256, defaults...)
 	for i := 0; i < b.N; i++ {
 		w.AppendString("hello world", 12, Text|AlignRight)
 		w.Reset()
@@ -28,7 +33,7 @@ func BenchmarkAppendString(b *testing.B) {
 }
 
 func TestAppendDuration(t *testing.T) {
-	w := NewWriter(256, 1, '_')
+	w := NewWriter(256, defaults...)
 	data := []struct {
 		Value string
 		Want  string
@@ -61,14 +66,14 @@ func TestAppendDuration(t *testing.T) {
 }
 
 func TestAppendFloat(t *testing.T) {
-	w := NewWriter(256, 0, '_')
+	w := NewWriter(256, defaults...)
 	data := []struct {
 		Value float64
 		Want  string
 		Flags Flag
 	}{
-		{Value: 0.9845, Flags: Float | AlignRight, Want: "      0.98"},
-		{Value: 0.9845, Flags: Float | Percent | AlignRight, Want: "    98.45%"},
+		{Value: 0.9845, Flags: Float | AlignRight, Want: "_      0.98_"},
+		{Value: 0.9845, Flags: Float | Percent | AlignRight, Want: "_    98.45%_"},
 	}
 	for i, d := range data {
 		if set := d.Flags & Percent; set == 0 {
@@ -86,7 +91,7 @@ func TestAppendFloat(t *testing.T) {
 }
 
 func TestAppendString(t *testing.T) {
-	w := NewWriter(256, 1, '_')
+	w := NewWriter(256, defaults...)
 	data := []struct {
 		Value string
 		Want  string
@@ -110,7 +115,7 @@ func TestAppendString(t *testing.T) {
 }
 
 func TestAppendInt(t *testing.T) {
-	w := NewWriter(250, 1, '_')
+	w := NewWriter(256, defaults...)
 	data := []struct {
 		Value int64
 		Want  string
@@ -133,7 +138,7 @@ func TestAppendInt(t *testing.T) {
 }
 
 func TestAppendBool(t *testing.T) {
-	w := NewWriter(250, 1, '_')
+	w := NewWriter(256, defaults...)
 	data := []struct {
 		Value bool
 		Want  string
@@ -160,7 +165,7 @@ func TestAppendBool(t *testing.T) {
 func TestAppendTime(t *testing.T) {
 	const timeFormat = "2006-01-02 15:04:05.000"
 
-	w := NewWriter(256, 1, '_')
+	w := NewWriter(256, defaults...)
 
 	d := time.Date(2019, 6, 11, 12, 25, 43, 0, time.UTC)
 	data := []struct {
@@ -185,22 +190,22 @@ func TestAppendTime(t *testing.T) {
 }
 
 func TestAppendUint(t *testing.T) {
-	w := New(256, 1)
+	w := NewWriter(256, defaults...)
 	data := []struct {
 		Value uint64
 		Want  string
 		Flags Flag
 	}{
-		{Value: 453721, Flags: Decimal | AlignRight, Want: "     453721 "},
-		{Value: 453721, Flags: Decimal | AlignLeft, Want: " 453721     "},
+		{Value: 453721, Flags: Decimal | AlignRight, Want: "_    453721_"},
+		{Value: 453721, Flags: Decimal | AlignLeft, Want: "_453721    _"},
 		{Value: 453721, Flags: Decimal | AlignRight | NoPadding, Want: "    453721"},
 		{Value: 453721, Flags: Decimal | AlignLeft | NoPadding, Want: "453721    "},
 		{Value: 453721, Flags: Hex | AlignLeft | NoPadding, Want: "6ec59     "},
 		{Value: 453721, Flags: Hex | AlignRight | NoPadding, Want: "     6ec59"},
 		{Value: 453721, Flags: Hex | AlignRight | NoPadding | WithZero, Want: "000006ec59"},
-		{Value: 453721, Flags: Hex | AlignRight | WithZero, Want: " 000006ec59 "},
-		{Value: 453721, Flags: Hex | AlignLeft, Want: " 6ec59      "},
-		{Value: 453721, Flags: Hex | AlignRight, Want: "      6ec59 "},
+		{Value: 453721, Flags: Hex | AlignRight | WithZero, Want: "_000006ec59_"},
+		{Value: 453721, Flags: Hex | AlignLeft, Want: "_6ec59     _"},
+		{Value: 453721, Flags: Hex | AlignRight, Want: "_     6ec59_"},
 	}
 	for i, d := range data {
 		w.AppendUint(d.Value, 10, d.Flags)

@@ -47,24 +47,28 @@ type Writer struct {
 	separator []byte
 }
 
-func NewWriter(size, padsiz int, padchar byte) *Writer {
+func NewWriter(size int, options ...func(*Writer)) *Writer {
 	w := Writer{
-		buffer:    make([]byte, size),
-		tmp:       make([]byte, 0, 512),
-		separator: []byte("|"),
+		buffer: make([]byte, size),
+		tmp:    make([]byte, 0, 512),
 	}
-	if padsiz > 0 {
-		w.padding = make([]byte, padsiz)
-		for i := 0; i < padsiz; i++ {
-			w.padding[i] = padchar
-		}
+	for i := 0; i < len(options); i++ {
+		options[i](&w)
 	}
 	w.Reset()
 	return &w
 }
 
-func New(size, padsiz int) *Writer {
-	return NewWriter(size, padsiz, ' ')
+func WithPadding(pad []byte) func(*Writer) {
+	return func(w *Writer) {
+		w.padding = append(w.padding, pad...)
+	}
+}
+
+func WithSeparator(seq []byte) func(*Writer) {
+	return func(w *Writer) {
+		w.separator = append(w.separator, seq...)
+	}
 }
 
 func (w *Writer) Reset() {
