@@ -24,6 +24,28 @@ func ExampleWriter() {
 	//     1 | 0001 | playback   | 44 | off
 }
 
+func ExampleAsCSV() {
+	w1 := NewWriter(256, AsCSV(false))
+	w1.AppendUint(1, 4, AlignRight)
+	w1.AppendUint(1, 4, AlignRight|Hex|WithZero)
+	w1.AppendString("playback", 10, AlignLeft)
+	w1.AppendUint(44, 2, AlignLeft|Decimal)
+	w1.AppendBool(false, 3, AlignCenter|OnOff)
+
+	w2 := NewWriter(256, AsCSV(true))
+	w2.AppendUint(1, 4, AlignRight)
+	w2.AppendUint(1, 4, AlignRight|Hex|WithZero)
+	w2.AppendString("playback", 10, AlignLeft)
+	w2.AppendUint(44, 2, AlignLeft|Decimal)
+	w2.AppendBool(false, 3, AlignCenter|OnOff)
+
+	fmt.Println(w1.String())
+	fmt.Println(w2.String())
+	// Output:
+	// 1,0001,playback,44,off
+	// "1","0001","playback","44","off"
+}
+
 func BenchmarkAppendString(b *testing.B) {
 	w := NewWriter(256, defaults...)
 	for i := 0; i < b.N; i++ {
@@ -98,6 +120,10 @@ func TestAppendString(t *testing.T) {
 		Flags Flag
 	}{
 		{Value: "hello", Flags: AlignRight, Want: "_     hello_"},
+		{Value: "hello", Flags: AlignRight | WithQuote, Want: "_     hello_"},
+		{Value: "hello", Flags: AlignRight | WithQuote | NoSpace, Want: "_\"hello\"_"},
+		{Value: "hello", Flags: AlignRight | NoSpace, Want: "_hello_"},
+		{Value: "hello", Flags: AlignRight | NoSpace | NoPadding, Want: "hello"},
 		{Value: "hello", Flags: AlignLeft, Want: "_hello     _"},
 		{Value: "hello", Flags: AlignRight | NoPadding, Want: "     hello"},
 		{Value: "hello", Flags: AlignLeft | NoPadding, Want: "hello     "},
@@ -147,9 +173,11 @@ func TestAppendBool(t *testing.T) {
 		{Value: true, Flags: AlignRight | YesNo, Want: "_  yes_"},
 		{Value: true, Flags: AlignRight | OnOff, Want: "_   on_"},
 		{Value: true, Flags: AlignRight | TrueFalse, Want: "_ true_"},
+		{Value: true, Flags: AlignRight | OneZero, Want: "_    1_"},
 		{Value: false, Flags: AlignRight | YesNo, Want: "_   no_"},
 		{Value: false, Flags: AlignRight | OnOff, Want: "_  off_"},
 		{Value: false, Flags: AlignRight | TrueFalse, Want: "_false_"},
+		{Value: false, Flags: AlignRight | OneZero, Want: "_    0_"},
 	}
 	for i, d := range data {
 		w.AppendBool(d.Value, 5, d.Flags)

@@ -2,7 +2,6 @@ package linewriter
 
 import (
 	"encoding/hex"
-	// "fmt"
 	"io"
 	"strconv"
 	"time"
@@ -19,11 +18,13 @@ const (
 	WithSign
 	WithPrefix
 	WithQuote
+	NoSpace
 	NoPadding
 	NoSeparator
 	YesNo
 	OnOff
 	TrueFalse
+	OneZero
 	Hex
 	Octal
 	Binary
@@ -38,6 +39,8 @@ const (
 	Microsecond
 )
 
+const DefaultFlags = AlignRight | Text | Second | TrueFalse | Decimal | Float
+
 type Writer struct {
 	buffer []byte
 	tmp    []byte
@@ -46,12 +49,15 @@ type Writer struct {
 	padding   []byte
 	separator []byte
 	newline   []byte
+
+	flags Flag
 }
 
 func NewWriter(size int, options ...func(*Writer)) *Writer {
 	w := Writer{
-		buffer:    make([]byte, size),
-		tmp:       make([]byte, 0, 512),
+		buffer: make([]byte, size),
+		tmp:    make([]byte, 0, 512),
+		flags:  DefaultFlags,
 	}
 	for i := 0; i < len(options); i++ {
 		options[i](&w)
@@ -61,6 +67,22 @@ func NewWriter(size int, options ...func(*Writer)) *Writer {
 	}
 	w.Reset()
 	return &w
+}
+
+func AsCSV(quoted bool) func(*Writer) {
+	return func(w *Writer) {
+		w.separator = append(w.separator, ',')
+		w.newline = append(w.newline, '\r', '\n')
+		if quoted {
+			w.flags |= WithQuote | NoPadding | NoSpace
+		}
+	}
+}
+
+func WithFlag(flag Flag) func(*Writer) {
+	return func(w *Writer) {
+		w.flags = flag
+	}
 }
 
 func WithPadding(pad []byte) func(*Writer) {
@@ -120,14 +142,15 @@ func (w *Writer) AppendString(str string, width int, flag Flag) {
 func (w *Writer) AppendBytes(bs []byte, width int, flag Flag) {
 	w.appendLeft(flag)
 
-	var data []byte
 	if set := flag & Hex; set != 0 {
-		data = make([]byte, hex.EncodedLen(len(bs)))
+		data := make([]byte, hex.EncodedLen(len(bs)))
 		hex.Encode(data, bs)
+		w.tmp = append(w.tmp, data...)
 	} else {
-		data = bs
+		w.tmp = append(w.tmp, bs...)
 	}
-	w.appendRight(data, width, flag)
+	w.appendRight(w.tmp, width, flag)
+	w.tmp = w.tmp[:0]
 }
 
 func (w *Writer) AppendTime(t time.Time, format string, flag Flag) {
@@ -164,6 +187,8 @@ func (w *Writer) AppendBool(b bool, width int, flag Flag) {
 		tval, fval = []byte("yes"), []byte("no")
 	} else if set := flag & OnOff; set != 0 {
 		tval, fval = []byte("on"), []byte("off")
+	} else if set := flag & OneZero; set != 0 {
+		tval, fval = []byte("1"), []byte("0")
 	} else {
 		tval, fval = []byte("true"), []byte("false")
 	}
@@ -234,20 +259,20 @@ func (w *Writer) AppendUint(v uint64, width int, flag Flag) {
 func (w *Writer) appendMillis(ns int64, flag Flag) {
 	const (
 		micros = 1000
-		millis = micros*1000
+		millis = micros * 1000
 	)
 	var unit []byte
 	if ns >= millis {
 		w.tmp = strconv.AppendInt(w.tmp, ns/millis, 10)
 		w.tmp = append(w.tmp, '.')
-		if µs := ns%millis; µs > 0 {
+		if µs := ns % millis; µs > 0 {
 			w.tmp = strconv.AppendInt(w.tmp, µs, 10)
 		}
 		unit = []byte("ms")
 	} else if ns >= micros {
 		w.tmp = strconv.AppendInt(w.tmp, ns/micros, 10)
 		w.tmp = append(w.tmp, '.')
-		if ns := ns%micros; ns > 0 {
+		if ns := ns % micros; ns > 0 {
 			w.tmp = strconv.AppendInt(w.tmp, ns, 10)
 		}
 		unit = []byte("µs")
@@ -260,20 +285,20 @@ func (w *Writer) appendMillis(ns int64, flag Flag) {
 }
 
 func (w *Writer) appendDHM(ns int64, flag Flag) {
-	if d := ns / (int64(time.Hour)*24); d > 0 {
+	if d := ns / (int64(time.Hour) * 24); d > 0 {
 		w.tmp = strconv.AppendInt(w.tmp, int64(d), 10)
 		w.tmp = append(w.tmp, 'd')
 	}
 	if d := (ns / int64(time.Hour)) % 24; d > 0 {
 		if d < 10 && len(w.tmp) > 0 {
-				w.tmp = append(w.tmp, '0')
+			w.tmp = append(w.tmp, '0')
 		}
 		w.tmp = strconv.AppendInt(w.tmp, int64(d), 10)
 		w.tmp = append(w.tmp, 'h')
 	}
 	if d := (ns / int64(time.Minute)) % 60; d > 0 {
 		if d < 10 && len(w.tmp) > 0 {
-				w.tmp = append(w.tmp, '0')
+			w.tmp = append(w.tmp, '0')
 		}
 		w.tmp = strconv.AppendInt(w.tmp, int64(d), 10)
 		w.tmp = append(w.tmp, 'm')
@@ -283,10 +308,10 @@ func (w *Writer) appendDHM(ns int64, flag Flag) {
 func (w *Writer) appendSeconds(ns int64, flag Flag) {
 	v := (ns / int64(time.Second)) % 60
 	if v < 10 && len(w.tmp) > 0 {
-			w.tmp = append(w.tmp, '0')
+		w.tmp = append(w.tmp, '0')
 	}
 	w.tmp, v = strconv.AppendInt(w.tmp, v, 10), -1
-	if s1, s2 := flag & Millisecond, flag & Microsecond; s1 > 0 || s2 > 0 {
+	if s1, s2 := flag&Millisecond, flag&Microsecond; s1 > 0 || s2 > 0 {
 		w.tmp = append(w.tmp, '.')
 	}
 
@@ -300,7 +325,7 @@ func (w *Writer) appendSeconds(ns int64, flag Flag) {
 		return
 	}
 	n := len(w.tmp)
-	if s1, s2 := flag & Millisecond, flag & Microsecond; s1 > 0 || s2 > 0 {
+	if s1, s2 := flag&Millisecond, flag&Microsecond; s1 > 0 || s2 > 0 {
 		if v < 10 {
 			w.tmp = append(w.tmp, '0')
 		}
@@ -319,12 +344,12 @@ func (w *Writer) appendSeconds(ns int64, flag Flag) {
 
 func skipZeros(tmp []byte) int {
 	var n int
-	for i := len(tmp)-1; i >= 0; i-- {
+	for i := len(tmp) - 1; i >= 0; i-- {
 		if tmp[i] != '0' {
 			if i == len(tmp)-1 {
 				n = len(tmp)
 			} else {
-				n = i+1
+				n = i + 1
 			}
 			break
 		}
@@ -342,25 +367,58 @@ func (w *Writer) appendRight(data []byte, width int, flag Flag) {
 	}
 
 	var padleft, padright int
-	if set := flag & AlignRight; set != 0 {
-		padleft = width - utf8.RuneCount(data)
-	} else if set := flag & AlignCenter; set != 0 {
-		padleft = (width - utf8.RuneCount(data)) / 2
-		padright = padleft
+	if isWithSpace(w.flags, flag) {
+		if set := flag & AlignRight; set != 0 {
+			padleft = width - utf8.RuneCount(data)
+		} else if set := flag & AlignCenter; set != 0 {
+			padleft = (width - utf8.RuneCount(data)) / 2
+			padright = padleft
 
-		if c := padleft + padright + size; c < width {
-			padright += width - c
+			if c := padleft + padright + size; c < width {
+				padright += width - c
+			}
+		} else {
+			padright = width - utf8.RuneCount(data)
 		}
 	} else {
-		padright = width - utf8.RuneCount(data)
+		if isWithQuote(w.flags, flag) {
+			w.buffer[w.offset] = '"'
+			w.offset++
+		}
 	}
 
-	copy(w.buffer[w.offset+padleft:], data)
-	w.offset += padleft + padright + size
+	n := copy(w.buffer[w.offset+padleft:], data)
+	w.offset += n
+	if isWithSpace(w.flags, flag) {
+		w.offset += padleft + padright
+	} else {
+		if isWithQuote(w.flags, flag) {
+			w.buffer[w.offset] = '"'
+			w.offset++
+		}
+	}
 
-	if set := flag & NoPadding; set == 0 {
+	if isWithPadding(w.flags, flag) {
 		w.offset += copy(w.buffer[w.offset:], w.padding)
 	}
+}
+
+func isWithQuote(def, giv Flag) bool {
+	d := def & WithQuote
+	g := giv & WithQuote
+	return d > 0 || g > 0
+}
+
+func isWithSpace(def, giv Flag) bool {
+	d := def & NoSpace
+	g := giv & NoSpace
+	return d == 0 && g == 0
+}
+
+func isWithPadding(def, giv Flag) bool {
+	d := def & NoPadding
+	g := giv & NoPadding
+	return d == 0 && g == 0
 }
 
 func (w *Writer) appendLeft(flag Flag) {
@@ -368,7 +426,7 @@ func (w *Writer) appendLeft(flag Flag) {
 		n := copy(w.buffer[w.offset:], w.separator)
 		w.offset += n
 	}
-	if set := flag & NoPadding; set == 0 {
+	if isWithPadding(w.flags, flag) {
 		w.offset += copy(w.buffer[w.offset:], w.padding)
 	}
 }
