@@ -1,7 +1,6 @@
 package linewriter
 
 import (
-	// "fmt"
 	"encoding/hex"
 	"io"
 	"strconv"
@@ -328,10 +327,10 @@ func (w *Writer) appendRight(data []byte, width int, flag Flag) {
 		width = size
 	}
 
-	var offset, padleft, padright int
+	var padleft, padright int
 	if set := flag & AlignRight; set != 0 {
 		padleft = width - utf8.RuneCount(data)
-		offset = w.offset + padleft
+		// offset = w.offset + padleft
 	} else if set := flag & AlignCenter; set != 0 {
 		count := utf8.RuneCount(data)
 		padleft = (width - size) / 2
@@ -339,12 +338,12 @@ func (w *Writer) appendRight(data []byte, width int, flag Flag) {
 		if count & 0x1 == 1 {
 			padright++
 		}
-		offset = w.offset + padleft
+		// offset = w.offset + padleft
 	} else {
 		padright = width - utf8.RuneCount(data)
-		offset = w.offset
 	}
-	copy(w.buffer[offset:], data)
+
+	copy(w.buffer[w.offset+padleft:], data)
 	w.offset += padleft + padright + size
 
 	if set := flag & NoPadding; set == 0 {
