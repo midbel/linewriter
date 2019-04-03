@@ -220,20 +220,20 @@ func (w *Writer) AppendUint(v uint64, width int, flag Flag) {
 func (w *Writer) appendMillis(ns int64, flag Flag) {
 	const (
 		micros = 1000
-		millis = micros*1000
+		millis = micros * 1000
 	)
 	var unit []byte
 	if ns >= millis {
 		w.tmp = strconv.AppendInt(w.tmp, ns/millis, 10)
 		w.tmp = append(w.tmp, '.')
-		if µs := ns%millis; µs > 0 {
+		if µs := ns % millis; µs > 0 {
 			w.tmp = strconv.AppendInt(w.tmp, µs, 10)
 		}
 		unit = []byte("ms")
 	} else if ns >= micros {
 		w.tmp = strconv.AppendInt(w.tmp, ns/micros, 10)
 		w.tmp = append(w.tmp, '.')
-		if ns := ns%micros; ns > 0 {
+		if ns := ns % micros; ns > 0 {
 			w.tmp = strconv.AppendInt(w.tmp, ns, 10)
 		}
 		unit = []byte("µs")
@@ -246,20 +246,20 @@ func (w *Writer) appendMillis(ns int64, flag Flag) {
 }
 
 func (w *Writer) appendDHM(ns int64, flag Flag) {
-	if d := ns / (int64(time.Hour)*24); d > 0 {
+	if d := ns / (int64(time.Hour) * 24); d > 0 {
 		w.tmp = strconv.AppendInt(w.tmp, int64(d), 10)
 		w.tmp = append(w.tmp, 'd')
 	}
 	if d := (ns / int64(time.Hour)) % 24; d > 0 {
 		if d < 10 && len(w.tmp) > 0 {
-				w.tmp = append(w.tmp, '0')
+			w.tmp = append(w.tmp, '0')
 		}
 		w.tmp = strconv.AppendInt(w.tmp, int64(d), 10)
 		w.tmp = append(w.tmp, 'h')
 	}
 	if d := (ns / int64(time.Minute)) % 60; d > 0 {
 		if d < 10 && len(w.tmp) > 0 {
-				w.tmp = append(w.tmp, '0')
+			w.tmp = append(w.tmp, '0')
 		}
 		w.tmp = strconv.AppendInt(w.tmp, int64(d), 10)
 		w.tmp = append(w.tmp, 'm')
@@ -269,10 +269,10 @@ func (w *Writer) appendDHM(ns int64, flag Flag) {
 func (w *Writer) appendSeconds(ns int64, flag Flag) {
 	v := (ns / int64(time.Second)) % 60
 	if v < 10 && len(w.tmp) > 0 {
-			w.tmp = append(w.tmp, '0')
+		w.tmp = append(w.tmp, '0')
 	}
 	w.tmp, v = strconv.AppendInt(w.tmp, v, 10), -1
-	if s1, s2 := flag & Millisecond, flag & Microsecond; s1 > 0 || s2 > 0 {
+	if s1, s2 := flag&Millisecond, flag&Microsecond; s1 > 0 || s2 > 0 {
 		w.tmp = append(w.tmp, '.')
 	}
 
@@ -286,7 +286,7 @@ func (w *Writer) appendSeconds(ns int64, flag Flag) {
 		return
 	}
 	n := len(w.tmp)
-	if s1, s2 := flag & Millisecond, flag & Microsecond; s1 > 0 || s2 > 0 {
+	if s1, s2 := flag&Millisecond, flag&Microsecond; s1 > 0 || s2 > 0 {
 		if v < 10 {
 			w.tmp = append(w.tmp, '0')
 		}
@@ -305,12 +305,12 @@ func (w *Writer) appendSeconds(ns int64, flag Flag) {
 
 func skipZeros(tmp []byte) int {
 	var n int
-	for i := len(tmp)-1; i >= 0; i-- {
+	for i := len(tmp) - 1; i >= 0; i-- {
 		if tmp[i] != '0' {
 			if i == len(tmp)-1 {
 				n = len(tmp)
 			} else {
-				n = i+1
+				n = i + 1
 			}
 			break
 		}

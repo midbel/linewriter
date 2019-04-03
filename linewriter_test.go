@@ -157,7 +157,6 @@ func TestAppendBool(t *testing.T) {
 	}
 }
 
-
 func TestAppendTime(t *testing.T) {
 	const timeFormat = "2006-01-02 15:04:05.000"
 
@@ -165,8 +164,8 @@ func TestAppendTime(t *testing.T) {
 
 	d := time.Date(2019, 6, 11, 12, 25, 43, 0, time.UTC)
 	data := []struct {
-		Value time.Time
-		Want  string
+		Value  time.Time
+		Want   string
 		Format string
 		Flags  Flag
 	}{
