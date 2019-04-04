@@ -73,8 +73,9 @@ func AsCSV(quoted bool) func(*Writer) {
 	return func(w *Writer) {
 		w.separator = append(w.separator, ',')
 		w.newline = append(w.newline, '\r', '\n')
+		w.flags |= NoPadding | NoSpace // | WithPrefix
 		if quoted {
-			w.flags |= WithQuote | NoPadding | NoSpace
+			w.flags |= WithQuote
 		}
 	}
 }
@@ -225,15 +226,20 @@ func (w *Writer) AppendFloat(v float64, width, prec int, flag Flag) {
 func (w *Writer) AppendInt(v int64, width int, flag Flag) {
 	w.appendLeft(flag)
 
+	base := w.prepareNumber(flag, v > 0)
 	if set := flag & WithZero; set != 0 {
-		for i := 0; i < width; i++ {
-			w.buffer[w.offset+i] = '0'
+		for i := len(w.tmp); i < width; i++ {
+			w.tmp = append(w.tmp, '0')
 		}
 	}
-	var base int
-	base, w.tmp = prepareNumber(w.tmp, flag, v > 0)
+	tmp := make([]byte, 0, 8)
+	tmp = strconv.AppendInt(tmp, v, base)
 
-	w.tmp = strconv.AppendInt(w.tmp, v, base)
+	if n := len(w.tmp); n == 0 || n < len(tmp) || flag&WithZero == 0 {
+		w.tmp = append(w.tmp, tmp...)
+	} else {
+		copy(w.tmp[n-len(tmp):], tmp)
+	}
 
 	w.appendRight(w.tmp, width, flag)
 	w.tmp = w.tmp[:0]
@@ -242,15 +248,20 @@ func (w *Writer) AppendInt(v int64, width int, flag Flag) {
 func (w *Writer) AppendUint(v uint64, width int, flag Flag) {
 	w.appendLeft(flag)
 
+	base := w.prepareNumber(flag, v > 0)
 	if set := flag & WithZero; set != 0 {
-		for i := 0; i < width; i++ {
-			w.buffer[w.offset+i] = '0'
+		for i := len(w.tmp); i < width; i++ {
+			w.tmp = append(w.tmp, '0')
 		}
 	}
-	var base int
-	base, w.tmp = prepareNumber(w.tmp, flag, v > 0)
+	tmp := make([]byte, 0, 8)
+	tmp = strconv.AppendUint(tmp, v, base)
 
-	w.tmp = strconv.AppendUint(w.tmp, v, base)
+	if n := len(w.tmp); n == 0 || n < len(tmp) || flag&WithZero == 0 {
+		w.tmp = append(w.tmp, tmp...)
+	} else {
+		copy(w.tmp[n-len(tmp):], tmp)
+	}
 
 	w.appendRight(w.tmp, width, flag)
 	w.tmp = w.tmp[:0]
@@ -403,6 +414,12 @@ func (w *Writer) appendRight(data []byte, width int, flag Flag) {
 	}
 }
 
+func isWithPrefix(def, giv Flag) bool {
+	d := def & WithPrefix
+	g := giv & WithPrefix
+	return d > 0 || g > 0
+}
+
 func isWithQuote(def, giv Flag) bool {
 	d := def & WithQuote
 	g := giv & WithQuote
@@ -431,7 +448,7 @@ func (w *Writer) appendLeft(flag Flag) {
 	}
 }
 
-func prepareNumber(data []byte, flag Flag, positive bool) (int, []byte) {
+func (w *Writer) prepareNumber(flag Flag, positive bool) int {
 	base := 10
 	if set := flag & Hex; set != 0 {
 		base = 16
@@ -442,17 +459,17 @@ func prepareNumber(data []byte, flag Flag, positive bool) (int, []byte) {
 	}
 
 	if set := flag & WithSign; set != 0 && positive {
-		data = append(data, '+')
+		w.tmp = append(w.tmp, '+')
 	}
-	if set := flag & WithPrefix; set != 0 {
+	if isWithPrefix(w.flags, flag) {
 		switch base {
 		case 2:
-			data = append(data, '0', 'b')
+			w.tmp = append(w.tmp, '0', 'b')
 		case 8:
-			data = append(data, '0', 'o')
+			w.tmp = append(w.tmp, '0', 'o')
 		case 16:
-			data = append(data, '0', 'x')
+			w.tmp = append(w.tmp, '0', 'x')
 		}
 	}
-	return base, data
+	return base
 }

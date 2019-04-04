@@ -163,6 +163,39 @@ func TestAppendInt(t *testing.T) {
 	}
 }
 
+func TestAppendUint(t *testing.T) {
+	w := NewWriter(256, defaults...)
+	data := []struct {
+		Value uint64
+		Want  string
+		Flags Flag
+	}{
+		{Value: 453721, Flags: Decimal | AlignRight, Want: "_    453721_"},
+		{Value: 453721, Flags: Decimal | AlignLeft, Want: "_453721    _"},
+		{Value: 453721, Flags: Decimal | AlignRight | NoPadding, Want: "    453721"},
+		{Value: 453721, Flags: Decimal | AlignLeft | NoPadding, Want: "453721    "},
+		{Value: 453721, Flags: Hex | AlignLeft | NoPadding, Want: "6ec59     "},
+		{Value: 453721, Flags: Hex | AlignRight | NoPadding, Want: "     6ec59"},
+		{Value: 453721, Flags: Hex | AlignRight | NoPadding | WithZero, Want: "000006ec59"},
+		{Value: 453721, Flags: Hex | AlignRight | WithZero, Want: "_000006ec59_"},
+		{Value: 453721, Flags: Hex | AlignLeft, Want: "_6ec59     _"},
+		{Value: 453721, Flags: Hex | AlignRight, Want: "_     6ec59_"},
+		{Value: 453721, Flags: Decimal | WithSign | AlignLeft, Want: "_+453721   _"},
+		{Value: 453721, Flags: Hex | WithPrefix | AlignLeft, Want: "_0x6ec59   _"},
+		{Value: 453721, Flags: Hex | WithPrefix | AlignRight, Want: "_   0x6ec59_"},
+		{Value: 453721, Flags: Hex | WithZero | WithPrefix | AlignLeft, Want: "_0x0006ec59_"},
+	}
+	for i, d := range data {
+		w.AppendUint(d.Value, 10, d.Flags)
+		got := w.String()
+
+		w.Reset()
+		if got != d.Want {
+			t.Errorf("%d: failed: want %q (%d), got: %q (%d)", i+1, d.Want, len(d.Want), got, len(got))
+		}
+	}
+}
+
 func TestAppendBool(t *testing.T) {
 	w := NewWriter(256, defaults...)
 	data := []struct {
@@ -208,35 +241,6 @@ func TestAppendTime(t *testing.T) {
 	}
 	for i, d := range data {
 		w.AppendTime(d.Value, d.Format, d.Flags)
-		got := w.String()
-
-		w.Reset()
-		if got != d.Want {
-			t.Errorf("%d: failed: want %q (%d), got: %q (%d)", i+1, d.Want, len(d.Want), got, len(got))
-		}
-	}
-}
-
-func TestAppendUint(t *testing.T) {
-	w := NewWriter(256, defaults...)
-	data := []struct {
-		Value uint64
-		Want  string
-		Flags Flag
-	}{
-		{Value: 453721, Flags: Decimal | AlignRight, Want: "_    453721_"},
-		{Value: 453721, Flags: Decimal | AlignLeft, Want: "_453721    _"},
-		{Value: 453721, Flags: Decimal | AlignRight | NoPadding, Want: "    453721"},
-		{Value: 453721, Flags: Decimal | AlignLeft | NoPadding, Want: "453721    "},
-		{Value: 453721, Flags: Hex | AlignLeft | NoPadding, Want: "6ec59     "},
-		{Value: 453721, Flags: Hex | AlignRight | NoPadding, Want: "     6ec59"},
-		{Value: 453721, Flags: Hex | AlignRight | NoPadding | WithZero, Want: "000006ec59"},
-		{Value: 453721, Flags: Hex | AlignRight | WithZero, Want: "_000006ec59_"},
-		{Value: 453721, Flags: Hex | AlignLeft, Want: "_6ec59     _"},
-		{Value: 453721, Flags: Hex | AlignRight, Want: "_     6ec59_"},
-	}
-	for i, d := range data {
-		w.AppendUint(d.Value, 10, d.Flags)
 		got := w.String()
 
 		w.Reset()
