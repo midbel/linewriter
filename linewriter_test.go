@@ -12,14 +12,14 @@ var defaults = []func(*Writer){
 }
 
 func ExampleWriter() {
-	w1 := NewWriter(256, WithPadding([]byte(" ")), WithSeparator([]byte("|")))
+	w1 := NewWriter(256, WithPadding([]byte("_")), WithSeparator([]byte("|")))
 	w1.AppendUint(1, 4, AlignRight)
 	w1.AppendUint(1, 4, AlignRight|Hex|WithZero)
 	w1.AppendString("playback", 10, AlignLeft)
 	w1.AppendUint(44, 2, AlignLeft|Decimal)
 	w1.AppendBool(false, 3, AlignCenter|OnOff)
 
-	w2 := NewWriter(256, WithPadding([]byte(" ")), WithSeparator([]byte("|")), WithLabel("[label]"))
+	w2 := NewWriter(256, WithPadding([]byte("_")), WithSeparator([]byte("|")), WithLabel("[label]"))
 	w2.AppendUint(1, 4, AlignRight)
 	w2.AppendUint(1, 4, AlignRight|Hex|WithZero)
 	w2.AppendString("playback", 10, AlignLeft)
@@ -29,8 +29,8 @@ func ExampleWriter() {
 	fmt.Println(w1.String())
 	fmt.Println(w2.String())
 	// Output:
-	//     1 | 0001 | playback   | 44 | off
-	// [label]    1 | 0001 | playback   | 44 | off
+	// _   1_|_0001_|_playback  _|_44_|_off_
+	// [label]_   1_|_0001_|_playback  _|_44_|_off_
 }
 
 func ExampleAsCSV() {
