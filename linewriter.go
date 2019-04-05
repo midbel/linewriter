@@ -368,6 +368,9 @@ func skipZeros(tmp []byte) int {
 	if n == 0 {
 		n = len(tmp)
 	}
+	if tmp[n-1] == '.' {
+		n--
+	}
 	return n
 }
 
