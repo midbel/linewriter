@@ -1,6 +1,7 @@
 package linewriter
 
 import (
+	// "fmt"
 	"encoding/hex"
 	"io"
 	"strconv"
@@ -49,6 +50,7 @@ type Writer struct {
 	padding   []byte
 	separator []byte
 	newline   []byte
+	prefix    []byte
 
 	flags Flag
 }
@@ -77,6 +79,16 @@ func AsCSV(quoted bool) func(*Writer) {
 		if quoted {
 			w.flags |= WithQuote
 		}
+	}
+}
+
+func WithLabel(p string) func(*Writer) {
+	return func(w *Writer) {
+		str := []byte(p)
+		if n := len(str) - 1; str[n] == ' ' {
+			str = str[:n]
+		}
+		w.prefix = append(w.prefix, str...)
 	}
 }
 
@@ -109,10 +121,14 @@ func (w *Writer) Reset() {
 	if w.offset > 0 {
 		n = w.offset
 	}
-	for i := 0; i < n; i++ {
+	x := len(w.prefix)
+	if x > 0 {
+		copy(w.buffer, w.prefix)
+	}
+	for i := x; i < n; i++ {
 		w.buffer[i] = ' '
 	}
-	w.offset = 0
+	w.offset = x
 }
 
 func (w *Writer) Bytes() []byte {
@@ -442,7 +458,7 @@ func isWithPadding(def, giv Flag) bool {
 }
 
 func (w *Writer) appendLeft(flag Flag) {
-	if set := flag & NoSeparator; w.offset > 0 && set == 0 {
+	if set := flag & NoSeparator; w.offset > len(w.prefix) && set == 0 {
 		n := copy(w.buffer[w.offset:], w.separator)
 		w.offset += n
 	}
