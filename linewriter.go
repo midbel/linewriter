@@ -45,12 +45,12 @@ const DefaultFlags = AlignRight | Text | Second | TrueFalse | Decimal | Float
 type Writer struct {
 	buffer []byte
 	tmp    []byte
+	base   int
 	offset int
 
 	padding   []byte
 	separator []byte
 	newline   []byte
-	prefix    []byte
 
 	flags Flag
 }
@@ -88,7 +88,7 @@ func WithLabel(p string) func(*Writer) {
 		if n := len(str) - 1; str[n] == ' ' {
 			str = str[:n]
 		}
-		w.prefix = append(w.prefix, str...)
+		w.base = copy(w.buffer, str)
 	}
 }
 
@@ -121,14 +121,10 @@ func (w *Writer) Reset() {
 	if w.offset > 0 {
 		n = w.offset
 	}
-	x := len(w.prefix)
-	if x > 0 {
-		copy(w.buffer, w.prefix)
-	}
-	for i := x; i < n; i++ {
+	for i := w.base; i < n; i++ {
 		w.buffer[i] = ' '
 	}
-	w.offset = x
+	w.offset = w.base
 }
 
 func (w *Writer) Bytes() []byte {
@@ -458,7 +454,7 @@ func isWithPadding(def, giv Flag) bool {
 }
 
 func (w *Writer) appendLeft(flag Flag) {
-	if set := flag & NoSeparator; w.offset > len(w.prefix) && set == 0 {
+	if set := flag & NoSeparator; w.offset > w.base && set == 0 {
 		n := copy(w.buffer[w.offset:], w.separator)
 		w.offset += n
 	}
