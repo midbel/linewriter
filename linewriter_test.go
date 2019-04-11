@@ -1,7 +1,9 @@
 package linewriter
 
 import (
+	"bytes"
 	"fmt"
+	"io"
 	"testing"
 	"time"
 )
@@ -60,6 +62,26 @@ func BenchmarkAppendString(b *testing.B) {
 	for i := 0; i < b.N; i++ {
 		w.AppendString("hello world", 12, Text|AlignRight)
 		w.Reset()
+	}
+}
+
+func TestRead(t *testing.T) {
+	w1 := NewWriter(256, AsCSV(false))
+	w1.AppendUint(1, 4, AlignRight)
+	w1.AppendUint(1, 4, AlignRight|Hex|WithZero)
+	w1.AppendString("playback", 10, AlignLeft)
+	w1.AppendUint(44, 2, AlignLeft|Decimal)
+	w1.AppendBool(false, 3, AlignCenter|OnOff)
+
+	str := w1.String() + "\n"
+
+	var buf bytes.Buffer
+	if _, err := io.Copy(&buf, w1); err != nil {
+		t.Errorf("unexpected error: %s", err)
+		return
+	}
+	if str != buf.String() {
+		t.Errorf("want: %s, got :%s", str, buf.String())
 	}
 }
 
