@@ -216,7 +216,9 @@ func TestAppendUint(t *testing.T) {
 		{Value: 453721, Flags: Hex | WithPrefix | AlignRight, Want: "_   0x6ec59_"},
 		{Value: 453721, Flags: Hex | WithZero | WithPrefix | AlignLeft, Want: "_0x0006ec59_"},
 		{Value: 5, Flags: Binary | AlignRight, Want: "_       101_"},
+		{Value: 5, Flags: Binary | WithPrefix | AlignRight, Want: "_     0b101_"},
 		{Value: 5, Flags: Octal | AlignRight, Want: "_         5_"},
+		{Value: 5, Flags: Octal | WithPrefix | AlignRight, Want: "_       0o5_"},
 	}
 	for i, d := range data {
 		w.AppendUint(d.Value, 10, d.Flags)
