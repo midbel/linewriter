@@ -66,7 +66,7 @@ func BenchmarkAppendString(b *testing.B) {
 }
 
 func TestRead(t *testing.T) {
-	w1 := NewWriter(256, AsCSV(false))
+	w1 := NewWriter(256, WithPadding([]byte("_")), WithSeparator([]byte("|")))
 	w1.AppendUint(1, 4, AlignRight)
 	w1.AppendUint(1, 4, AlignRight|Hex|WithZero)
 	w1.AppendString("playback", 10, AlignLeft)
@@ -81,7 +81,7 @@ func TestRead(t *testing.T) {
 		return
 	}
 	if str != buf.String() {
-		t.Errorf("want: %s, got :%s", str, buf.String())
+		t.Errorf("want: %s (%[1]x), got : %s (%[2]x)", str, buf.String())
 	}
 }
 
