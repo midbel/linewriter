@@ -8,7 +8,7 @@ import (
 	"time"
 )
 
-var defaults = []func(*Writer){
+var defaults = []Option{
 	WithPadding([]byte("_")),
 	WithSeparator([]byte("|")),
 }
