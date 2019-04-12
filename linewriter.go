@@ -40,6 +40,8 @@ const (
 	Microsecond
 )
 
+type Option func(*Writer)
+
 const DefaultFlags = AlignRight | Text | Second | TrueFalse | Decimal | Float
 
 type Writer struct {
@@ -55,7 +57,7 @@ type Writer struct {
 	flags Flag
 }
 
-func NewWriter(size int, options ...func(*Writer)) *Writer {
+func NewWriter(size int, options ...Option) *Writer {
 	w := Writer{
 		buffer: make([]byte, size),
 		tmp:    make([]byte, 0, 512),
@@ -71,7 +73,7 @@ func NewWriter(size int, options ...func(*Writer)) *Writer {
 	return &w
 }
 
-func AsCSV(quoted bool) func(*Writer) {
+func AsCSV(quoted bool) Option {
 	return func(w *Writer) {
 		w.separator = append(w.separator, ',')
 		w.newline = append(w.newline, '\r', '\n')
@@ -82,7 +84,7 @@ func AsCSV(quoted bool) func(*Writer) {
 	}
 }
 
-func WithLabel(p string) func(*Writer) {
+func WithLabel(p string) Option {
 	return func(w *Writer) {
 		str := []byte(p)
 		if n := len(str) - 1; str[n] == ' ' {
@@ -92,25 +94,25 @@ func WithLabel(p string) func(*Writer) {
 	}
 }
 
-func WithFlag(flag Flag) func(*Writer) {
+func WithFlag(flag Flag) Option {
 	return func(w *Writer) {
 		w.flags = flag
 	}
 }
 
-func WithPadding(pad []byte) func(*Writer) {
+func WithPadding(pad []byte) Option {
 	return func(w *Writer) {
 		w.padding = append(w.padding, pad...)
 	}
 }
 
-func WithSeparator(seq []byte) func(*Writer) {
+func WithSeparator(seq []byte) Option {
 	return func(w *Writer) {
 		w.separator = append(w.separator, seq...)
 	}
 }
 
-func WithCRLF() func(*Writer) {
+func WithCRLF() Option {
 	return func(w *Writer) {
 		w.newline = append(w.newline, '\r', '\n')
 	}
