@@ -237,6 +237,49 @@ func (w *Writer) AppendFloat(v float64, width, prec int, flag Flag) {
 	w.tmp = w.tmp[:0]
 }
 
+func (w *Writer) AppendSize(v int64, width int, flag Flag) {
+	const (
+		kilo = 1<<10
+		mega = 1<<20
+		giga = 1<<30
+	)
+	w.appendLeft(flag)
+
+	var (
+		unit []byte
+		mod  int64
+	)
+	switch {
+	default:
+		mod = 1
+	case v >= kilo && v < mega:
+		mod = kilo
+		unit = []byte("K")
+	case v >= mega && v < giga:
+		mod = mega
+		unit = []byte("M")
+	case v >= giga:
+		mod = giga
+		unit = []byte("G")
+	}
+	size, prec := v / mod, v % mod
+	w.tmp = strconv.AppendInt(w.tmp, size, 10)
+	if prec > 0 {
+		w.tmp = append(w.tmp, '.')
+		n := len(w.tmp)
+		w.tmp = strconv.AppendInt(w.tmp, prec, 10)
+		if len(w.tmp) - n > 2 {
+			w.tmp = w.tmp[:n+2]
+		}
+	}
+	if len(unit) > 0 {
+		w.tmp = append(w.tmp, unit...)
+	}
+
+	w.appendRight(w.tmp, width, flag)
+	w.tmp = w.tmp[:0]
+}
+
 func (w *Writer) AppendInt(v int64, width int, flag Flag) {
 	w.appendLeft(flag)
 
