@@ -38,11 +38,13 @@ const (
 	Second
 	Millisecond
 	Microsecond
+	SizeSI
+	SizeIEC
 )
 
 type Option func(*Writer)
 
-const DefaultFlags = AlignRight | Text | Second | TrueFalse | Decimal | Float
+const DefaultFlags = AlignRight | Text | Second | TrueFalse | Decimal | Float | SizeIEC
 
 type Writer struct {
 	buffer []byte
@@ -238,42 +240,29 @@ func (w *Writer) AppendFloat(v float64, width, prec int, flag Flag) {
 }
 
 func (w *Writer) AppendSize(v int64, width int, flag Flag) {
-	const (
-		kilo = 1<<10
-		mega = 1<<20
-		giga = 1<<30
-	)
 	w.appendLeft(flag)
 
 	var (
-		unit []byte
-		mod  int64
+		size int64
+		prec int64
+		unit byte
 	)
-	switch {
-	default:
-		mod = 1
-	case v >= kilo && v < mega:
-		mod = kilo
-		unit = []byte("K")
-	case v >= mega && v < giga:
-		mod = mega
-		unit = []byte("M")
-	case v >= giga:
-		mod = giga
-		unit = []byte("G")
+	if isSizeIEC(w.flags, flag) {
+		size, prec, unit = prepareSize(v, kibi, mebi, gibi, tebi, pebi, exbi)
+	} else {
+		size, prec, unit = prepareSize(v, kilo, mega, giga, tera, peta, exa)
 	}
-	size, prec := v / mod, v % mod
 	w.tmp = strconv.AppendInt(w.tmp, size, 10)
 	if prec > 0 {
 		w.tmp = append(w.tmp, '.')
 		n := len(w.tmp)
 		w.tmp = strconv.AppendInt(w.tmp, prec, 10)
-		if len(w.tmp) - n > 2 {
+		if len(w.tmp)-n > 2 {
 			w.tmp = w.tmp[:n+2]
 		}
 	}
-	if len(unit) > 0 {
-		w.tmp = append(w.tmp, unit...)
+	if unit != 0 {
+		w.tmp = append(w.tmp, unit)
 	}
 
 	w.appendRight(w.tmp, width, flag)
@@ -474,6 +463,12 @@ func (w *Writer) appendRight(data []byte, width int, flag Flag) {
 	}
 }
 
+func isSizeIEC(def, giv Flag) bool {
+	d := def & SizeIEC
+	g := giv & SizeIEC
+	return g > 0 || d > 0
+}
+
 func isWithPrefix(def, giv Flag) bool {
 	d := def & WithPrefix
 	g := giv & WithPrefix
@@ -532,4 +527,44 @@ func (w *Writer) prepareNumber(flag Flag, positive bool) int {
 		}
 	}
 	return base
+}
+
+const (
+	kilo = 1000
+	mega = kilo * kilo
+	giga = kilo * mega
+	tera = kilo * giga
+	peta = kilo * tera
+	exa  = kilo * peta
+)
+
+const (
+	kibi = 1 << 10
+	mebi = 1 << 20
+	gibi = 1 << 30
+	tebi = 1 << 40
+	pebi = 1 << 50
+	exbi = 1 << 60
+)
+
+func prepareSize(v, kb, mb, gb, tb, pb, eb int64) (int64, int64, byte) {
+	var (
+		unit byte
+		mod  int64
+	)
+	switch {
+	default:
+		mod = 1
+	case v >= kb && v < mb:
+		mod, unit = kb, 'K'
+	case v >= mb && v < gb:
+		mod, unit = mb, 'M'
+	case v >= gb && v < tb:
+		mod, unit = gb, 'G'
+	case v >= tb && v < pb:
+		mod, unit = pb, 'P'
+	case v >= eb:
+		mod, unit = eb, 'E'
+	}
+	return v / mod, v % mod, unit
 }
