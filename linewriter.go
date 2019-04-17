@@ -151,6 +151,18 @@ func (w *Writer) Read(bs []byte) (int, error) {
 	return n, nil
 }
 
+func (w *Writer) WriteTo(ws io.Writer) (int64, error) {
+	defer w.Reset()
+	if w.offset == 0 {
+		return 0, io.EOF
+	}
+	n, err := ws.Write(append(w.buffer[:w.offset], w.newline...))
+	if err == nil {
+		err = io.EOF
+	}
+	return int64(n), err
+}
+
 func (w *Writer) AppendString(str string, width int, flag Flag) {
 	flag = flag &^ Hex
 	w.AppendBytes([]byte(str), width, flag|Text)
