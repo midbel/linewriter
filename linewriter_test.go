@@ -104,6 +104,10 @@ func TestAppendDuration(t *testing.T) {
 		{Value: "1452.32µs", Flags: AlignRight | WithZero, Want: "_   1.45232ms_"},
 		{Value: "452.32µs", Flags: AlignRight | WithZero, Want: "_    452.32µs_"},
 		{Value: "452ns", Flags: AlignRight | WithZero, Want: "_       452ns_"},
+		{Value: "-1m12s", Flags: AlignRight | Second, Want: "_      -1m12s_"},
+		{Value: "-1h12m37s", Flags: AlignRight | Second, Want: "_   -1h12m37s_"},
+		{Value: "-34s", Flags: AlignRight | Second, Want: "_        -34s_"},
+		{Value: "-3s", Flags: AlignRight | Second, Want: "_         -3s_"},
 	}
 	for i, d := range data {
 		v, _ := time.ParseDuration(d.Value)
@@ -112,7 +116,6 @@ func TestAppendDuration(t *testing.T) {
 
 		w.Reset()
 		if got != d.Want {
-			t.Logf("want: %x - got: %x", d.Want, got)
 			t.Errorf("%d: failed: want %q (%d), got: %q (%d)", i+1, d.Want, len(d.Want), got, len(got))
 		}
 	}

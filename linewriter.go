@@ -194,6 +194,10 @@ func (w *Writer) AppendTime(t time.Time, format string, flag Flag) {
 func (w *Writer) AppendDuration(d time.Duration, width int, flag Flag) {
 	w.appendLeft(flag)
 
+	if d < 0 {
+		w.tmp = append(w.tmp, '-')
+		d = -d
+	}
 	ns := d.Nanoseconds()
 	if d >= time.Minute {
 		w.appendDHM(ns, flag)
@@ -359,14 +363,14 @@ func (w *Writer) appendDHM(ns int64, flag Flag) {
 		w.tmp = append(w.tmp, 'd')
 	}
 	if d := (ns / int64(time.Hour)) % 24; d > 0 {
-		if d < 10 && len(w.tmp) > 0 {
+		if d < 10 && len(w.tmp) > 0 && w.tmp[0] != '-' {
 			w.tmp = append(w.tmp, '0')
 		}
 		w.tmp = strconv.AppendInt(w.tmp, int64(d), 10)
 		w.tmp = append(w.tmp, 'h')
 	}
 	if d := (ns / int64(time.Minute)) % 60; d > 0 {
-		if d < 10 && len(w.tmp) > 0 {
+		if d < 10 && len(w.tmp) > 0 && w.tmp[0] != '-' {
 			w.tmp = append(w.tmp, '0')
 		}
 		w.tmp = strconv.AppendInt(w.tmp, int64(d), 10)
@@ -376,7 +380,7 @@ func (w *Writer) appendDHM(ns int64, flag Flag) {
 
 func (w *Writer) appendSeconds(ns int64, flag Flag) {
 	v := (ns / int64(time.Second)) % 60
-	if v < 10 && len(w.tmp) > 0 {
+	if v < 10 && len(w.tmp) > 0 && w.tmp[0] != '-' {
 		w.tmp = append(w.tmp, '0')
 	}
 	w.tmp, v = strconv.AppendInt(w.tmp, v, 10), -1
