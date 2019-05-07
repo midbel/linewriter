@@ -52,6 +52,8 @@ type Writer struct {
 	base   int
 	offset int
 
+	dontaddsep bool
+
 	padding   []byte
 	separator []byte
 	newline   []byte
@@ -162,6 +164,16 @@ func (w *Writer) WriteTo(ws io.Writer) (int64, error) {
 	}
 	return int64(n), err
 }
+
+func (w *Writer) AppendSeparator(n int) {
+	for i := 0; i < n; i++ {
+		w.offset += copy(w.buffer[w.offset:], w.separator)
+	}
+	w.dontaddsep = n > 1
+}
+
+// func (w *Writer) AppendDatum(bs []byte, width int, flag Flag) {
+// }
 
 func (w *Writer) AppendString(str string, width int, flag Flag) {
 	flag = flag &^ Hex
@@ -511,8 +523,10 @@ func isWithPadding(def, giv Flag) bool {
 
 func (w *Writer) appendLeft(flag Flag) {
 	if set := flag & NoSeparator; w.offset > w.base && set == 0 {
-		n := copy(w.buffer[w.offset:], w.separator)
-		w.offset += n
+		if !w.dontaddsep {
+			n := copy(w.buffer[w.offset:], w.separator)
+			w.offset += n
+		}
 	}
 	if isWithPadding(w.flags, flag) {
 		w.offset += copy(w.buffer[w.offset:], w.padding)
