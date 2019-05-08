@@ -35,6 +35,21 @@ func ExampleWriter() {
 	// [label]_   1_|_0001_|_playback  _|_44_|_off_
 }
 
+func ExampleWriter_AppendSeparator() {
+	w1 := NewWriter(256, WithPadding([]byte("_")), WithSeparator([]byte("|")))
+	w1.AppendUint(1, 4, AlignRight)
+	w1.AppendUint(1, 4, AlignRight|Hex|WithZero)
+	w1.AppendSeparator(1)
+	w1.AppendString("playback", 10, AlignLeft)
+	w1.AppendSeparator(3)
+	w1.AppendUint(44, 2, AlignLeft|Decimal)
+	w1.AppendBool(false, 3, AlignCenter|OnOff)
+
+	fmt.Println(w1.String())
+	// Output:
+	// _   1_|_0001_||_playback  _|||_44_|_off_
+}
+
 func ExampleAsCSV() {
 	w1 := NewWriter(256, AsCSV(false))
 	w1.AppendUint(1, 4, AlignRight)
@@ -76,7 +91,7 @@ func TestRead(t *testing.T) {
 	str := w1.String() + "\n"
 
 	var buf bytes.Buffer
-	if _, err := io.Copy(&buf, w1); err != nil {
+	if _, err := io.Copy(&buf, w1); err != nil && err != io.EOF {
 		t.Errorf("unexpected error: %s", err)
 		return
 	}

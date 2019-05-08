@@ -526,6 +526,8 @@ func (w *Writer) appendLeft(flag Flag) {
 		if !w.dontaddsep {
 			n := copy(w.buffer[w.offset:], w.separator)
 			w.offset += n
+		} else {
+			w.dontaddsep = !w.dontaddsep
 		}
 	}
 	if isWithPadding(w.flags, flag) {
