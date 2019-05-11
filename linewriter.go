@@ -206,18 +206,22 @@ func (w *Writer) AppendTime(t time.Time, format string, flag Flag) {
 func (w *Writer) AppendDuration(d time.Duration, width int, flag Flag) {
 	w.appendLeft(flag)
 
-	if d < 0 {
-		w.tmp = append(w.tmp, '-')
-		d = -d
-	}
-	ns := d.Nanoseconds()
-	if d >= time.Minute {
-		w.appendDHM(ns, flag)
-	}
-	if d >= time.Second {
-		w.appendSeconds(ns, flag)
+	if d == 0 {
+		w.tmp = append(w.tmp, '0')
 	} else {
-		w.appendMillis(ns, flag)
+		if d < 0 {
+			w.tmp = append(w.tmp, '-')
+			d = -d
+		}
+		ns := d.Nanoseconds()
+		if d >= time.Minute {
+			w.appendDHM(ns, flag)
+		}
+		if d >= time.Second {
+			w.appendSeconds(ns, flag)
+		} else {
+			w.appendMillis(ns, flag)
+		}
 	}
 
 	w.appendRight(w.tmp, width, flag)
