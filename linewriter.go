@@ -354,7 +354,7 @@ func (w *Writer) appendMillis(ns int64, flag Flag) {
 	if ns >= millis {
 		w.tmp = strconv.AppendInt(w.tmp, ns/millis, 10)
 		w.tmp = append(w.tmp, '.')
-		if µs := ns % millis; µs > 0 {
+		if µs := ns % millis; µs > 0 && (flag & Millisecond) == 0 {
 			w.tmp = strconv.AppendInt(w.tmp, µs, 10)
 		}
 		unit = []byte("ms")
