@@ -155,7 +155,7 @@ func (w *Writer) Read(bs []byte) (int, error) {
 
 func (w *Writer) WriteTo(ws io.Writer) (int64, error) {
 	defer w.Reset()
-	if w.offset == 0 {
+	if w.offset == 0 || w.offset == w.base {
 		return 0, io.EOF
 	}
 	n, err := ws.Write(append(w.buffer[:w.offset], w.newline...))
