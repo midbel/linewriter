@@ -264,6 +264,16 @@ func (w *Writer) AppendFloat(v float64, width, prec int, flag Flag) {
 		format = 'f'
 	}
 	w.tmp = strconv.AppendFloat(w.tmp, v, format, prec, 64)
+	if set := flag & WithZero; set == 0 {
+		i := len(w.tmp) - 1
+		for i >= 0 && w.tmp[i] == '0' {
+			i--
+		}
+		if w.tmp[i] != '.' {
+			i++
+		}
+		w.tmp = w.tmp[:i]
+	}
 	if set := flag & Percent; set != 0 {
 		w.tmp = append(w.tmp, '%')
 	}
@@ -354,7 +364,7 @@ func (w *Writer) appendMillis(ns int64, flag Flag) {
 	if ns >= millis {
 		w.tmp = strconv.AppendInt(w.tmp, ns/millis, 10)
 		w.tmp = append(w.tmp, '.')
-		if µs := ns % millis; µs > 0 && (flag & Millisecond) == 0 {
+		if µs := ns % millis; µs > 0 && (flag&Millisecond) == 0 {
 			w.tmp = strconv.AppendInt(w.tmp, µs, 10)
 		}
 		unit = []byte("ms")
