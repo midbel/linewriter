@@ -146,6 +146,8 @@ func TestAppendFloat(t *testing.T) {
 		{Value: 0.9845, Flags: Float | AlignRight, Want: "_      0.98_"},
 		{Value: 0.9845, Flags: Float | Percent | AlignRight, Want: "_    98.45%_"},
 		{Value: 0, Flags: Float | AlignRight, Want: "_         0_"},
+		{Value: 0.00, Flags: Float | AlignRight, Want: "_         0_"},
+		{Value: 0.01, Flags: Float | AlignRight, Want: "_      0.01_"},
 		{Value: 0.1230, Flags: Float | AlignRight, Want: "_      0.12_"},
 	}
 	for i, d := range data {
