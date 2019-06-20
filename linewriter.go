@@ -2,6 +2,7 @@ package linewriter
 
 import (
 	"encoding/hex"
+	"fmt"
 	"io"
 	"strconv"
 	"time"
@@ -271,9 +272,7 @@ func (w *Writer) AppendFloat(v float64, width, prec int, flag Flag) {
 		if i > 0 && w.tmp[i] != '.' {
 			i++
 		}
-		if i > 0 {
-			w.tmp = w.tmp[:i]
-		}
+		w.tmp = w.tmp[:i]
 	}
 	if set := flag & Percent; set != 0 {
 		w.tmp = append(w.tmp, '%')
