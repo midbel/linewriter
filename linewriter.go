@@ -270,13 +270,10 @@ func (w *Writer) AppendFloat(v float64, width, prec int, flag Flag) {
 		}
 		if i > 0 && w.tmp[i] != '.' {
 			i++
-		} else {
-			i = 1
 		}
-		// if w.tmp[i] != '.' {
-		// 	i++
-		// }
-		w.tmp = w.tmp[:i]
+		if i > 0 {
+			w.tmp = w.tmp[:i]
+		}
 	}
 	if set := flag & Percent; set != 0 {
 		w.tmp = append(w.tmp, '%')
