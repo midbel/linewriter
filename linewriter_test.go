@@ -149,6 +149,9 @@ func TestAppendFloat(t *testing.T) {
 		{Value: 0.00, Flags: Float | AlignRight, Want: "_         0_"},
 		{Value: 0.01, Flags: Float | AlignRight, Want: "_      0.01_"},
 		{Value: 0.1230, Flags: Float | AlignRight, Want: "_      0.12_"},
+		{Value: 0.1230, Flags: Float | AlignRight | WithZero, Want: "_      0.12_"},
+		{Value: 100, Flags: Float | AlignRight, Want: "_       100_"},
+		{Value: 100, Flags: Float | AlignRight | WithZero, Want: "_    100.00_"},
 	}
 	for i, d := range data {
 		if set := d.Flags & Percent; set == 0 {

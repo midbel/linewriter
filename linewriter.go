@@ -263,7 +263,7 @@ func (w *Writer) AppendFloat(v float64, width, prec int, flag Flag) {
 		format = 'f'
 	}
 	w.tmp = strconv.AppendFloat(w.tmp, v, format, prec, 64)
-	if set, i := flag & WithZero, len(w.tmp)-1; set == 0 && i > 0 {
+	if set, i := flag&WithZero, len(w.tmp)-1; set == 0 && i > 0 {
 		for i >= 0 && w.tmp[i] == '0' {
 			i--
 		}
