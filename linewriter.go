@@ -6,6 +6,8 @@ import (
 	"strconv"
 	"time"
 	"unicode/utf8"
+
+	"github.com/midbel/sizefmt"
 )
 
 type Flag uint64
@@ -171,9 +173,6 @@ func (w *Writer) AppendSeparator(n int) {
 	w.dontaddsep = n > 1
 }
 
-// func (w *Writer) AppendDatum(bs []byte, width int, flag Flag) {
-// }
-
 func (w *Writer) AppendString(str string, width int, flag Flag) {
 	flag = flag &^ Hex
 	w.AppendBytes([]byte(str), width, flag|Text)
@@ -280,33 +279,13 @@ func (w *Writer) AppendFloat(v float64, width, prec int, flag Flag) {
 }
 
 func (w *Writer) AppendSize(v int64, width int, flag Flag) {
-	w.appendLeft(flag)
-
-	var (
-		size int64
-		prec int64
-		unit byte
-	)
-	if isSizeIEC(w.flags, flag) {
-		size, prec, unit = prepareSize(v, kibi, mebi, gibi, tebi, pebi, exbi)
+	var size string
+	if z := float64(v); isSizeIEC(w.flags, flag) {
+		size = sizefmt.Format(z, sizefmt.IEC)
 	} else {
-		size, prec, unit = prepareSize(v, kilo, mega, giga, tera, peta, exa)
+		size = sizefmt.Format(z, sizefmt.SI)
 	}
-	w.tmp = strconv.AppendInt(w.tmp, size, 10)
-	if prec > 0 {
-		w.tmp = append(w.tmp, '.')
-		n := len(w.tmp)
-		w.tmp = strconv.AppendInt(w.tmp, prec, 10)
-		if len(w.tmp)-n > 2 {
-			w.tmp = w.tmp[:n+2]
-		}
-	}
-	if unit != 0 {
-		w.tmp = append(w.tmp, unit)
-	}
-
-	w.appendRight(w.tmp, width, flag)
-	w.tmp = w.tmp[:0]
+	w.AppendString(size, width, flag)
 }
 
 func (w *Writer) AppendInt(v int64, width int, flag Flag) {
@@ -571,44 +550,4 @@ func (w *Writer) prepareNumber(flag Flag, positive bool) int {
 		}
 	}
 	return base
-}
-
-const (
-	kilo = 1000
-	mega = kilo * kilo
-	giga = kilo * mega
-	tera = kilo * giga
-	peta = kilo * tera
-	exa  = kilo * peta
-)
-
-const (
-	kibi = 1 << 10
-	mebi = 1 << 20
-	gibi = 1 << 30
-	tebi = 1 << 40
-	pebi = 1 << 50
-	exbi = 1 << 60
-)
-
-func prepareSize(v, kb, mb, gb, tb, pb, eb int64) (int64, int64, byte) {
-	var (
-		unit byte
-		mod  int64
-	)
-	switch {
-	default:
-		mod = 1
-	case v >= kb && v < mb:
-		mod, unit = kb, 'K'
-	case v >= mb && v < gb:
-		mod, unit = mb, 'M'
-	case v >= gb && v < tb:
-		mod, unit = gb, 'G'
-	case v >= tb && v < pb:
-		mod, unit = pb, 'P'
-	case v >= eb:
-		mod, unit = eb, 'E'
-	}
-	return v / mod, v % mod, unit
 }
