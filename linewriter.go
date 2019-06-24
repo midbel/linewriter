@@ -53,7 +53,8 @@ type Writer struct {
 	base   int
 	offset int
 
-	dontaddsep bool
+	dontaddsep  bool
+	ignorenosep bool
 
 	padding   []byte
 	separator []byte
@@ -82,10 +83,11 @@ func AsCSV(quoted bool) Option {
 	return func(w *Writer) {
 		w.separator = append(w.separator, ',')
 		w.newline = append(w.newline, '\r', '\n')
-		w.flags |= NoPadding | NoSpace // | WithPrefix
+		w.flags |= NoPadding | NoSpace
 		if quoted {
 			w.flags |= WithQuote
 		}
+		w.ignorenosep = true
 	}
 }
 
@@ -513,13 +515,18 @@ func isWithPadding(def, giv Flag) bool {
 }
 
 func (w *Writer) appendLeft(flag Flag) {
-	if set := flag & NoSeparator; w.offset > w.base && set == 0 {
-		if !w.dontaddsep {
-			n := copy(w.buffer[w.offset:], w.separator)
-			w.offset += n
-		} else {
-			w.dontaddsep = !w.dontaddsep
+	if w.offset > w.base {
+		var n int
+		if w.ignorenosep {
+			n = copy(w.buffer[w.offset:], w.separator)
+		} else if set := flag & NoSeparator; set == 0 {
+			if !w.dontaddsep {
+				n = copy(w.buffer[w.offset:], w.separator)
+			} else {
+				w.dontaddsep = !w.dontaddsep
+			}
 		}
+		w.offset += n
 	}
 	if isWithPadding(w.flags, flag) {
 		w.offset += copy(w.buffer[w.offset:], w.padding)
